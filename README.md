@@ -17,7 +17,7 @@ CPP_Programming/
     ├── strings/             std::string, string_view, stringstream, conversions
     ├── classes/             constructors, virtual, override, abstract, slicing
     ├── file_io/             fstream, binary mode, seekg/seekp, stringstream
-    ├── templates/           function/class templates, variadic, fold, CTAD, concepts
+    ├── templates/           function/class templates, variadic, fold, CTAD (Class Template Argument Deduction), concepts
     ├── error_handling/      exceptions, noexcept, optional, expected, error_code
     ├── concurrency/         thread, mutex, lock_guard, condition_variable, atomic
     ├── processes/           fork/exec/waitpid, pipes, RAII wrappers (POSIX)
@@ -66,26 +66,26 @@ make clean
 | 10 | Linked Lists | class template `LinkedList<T>`, destructor, `std::list` comparison |
 | 11 | Operator Overloading | `operator+`, `+=`, `==`, `<<`, `[]`, pre/post `++` |
 | 12 | Inheritance | `virtual`, `override`, `final`, abstract base, `dynamic_cast`, slicing |
-| 13 | Templates | function/class templates, non-type params, specialisation, variadic, fold |
+| 13 | Templates | function/class templates, non-type params, specialisation, variadic, fold, CTAD (Class Template Argument Deduction) |
 | 14 | STL Containers | `vector`, `deque`, `list`, `map`, `unordered_map`, `set`, adapters |
 | 15 | STL Algorithms | `sort`, `find_if`, `transform`, `accumulate`, `copy_if`, `lower_bound` |
 | 16 | Enums & Variants | `enum class`, `std::optional`, `std::variant`, `std::visit` |
 | 17 | Exceptions | `throw`/`try`/`catch`, custom exceptions, `noexcept`, exception safety |
-| 18 | Lambdas | capture modes, `mutable`, generic lambdas, `std::function`, IILE |
+| 18 | Lambdas | capture modes, `mutable`, generic lambdas, `std::function`, IILE (Immediately-Invoked Lambda Expression) |
 | 19 | Smart Pointers | `unique_ptr`/`shared_ptr`/`weak_ptr` deep dive, `enable_shared_from_this` |
-| 20 | Move Semantics | lvalue/rvalue refs, Rule of Five, `std::move`, `std::forward`, NRVO |
+| 20 | Move Semantics | lvalue/rvalue refs, Rule of Five, `std::move`, `std::forward`, NRVO (Named Return Value Optimization) |
 | 21 | Variadic Templates | parameter packs, fold expressions, `std::tuple`, `std::index_sequence` |
-| 22 | Namespaces | nesting, anonymous, `using`, aliases, ADL, inline namespaces, `extern "C"` |
+| 22 | Namespaces | nesting, anonymous, `using`, aliases, ADL (Argument-Dependent Lookup), inline namespaces, `extern "C"` |
 | 23 | Signal Handling | `sig_atomic_t`, `signal()`, `sigaction()`, `sigprocmask`, `SIGALRM` |
 | 24 | std::thread | `thread`, `mutex`, `lock_guard`, `condition_variable`, bounded queue |
 | 25 | Process Control | `fork`, `waitpid`, `execvp`, pipes, RAII pipe class, `popen` |
 | 26 | Sockets | TCP/UDP/AF_UNIX, RAII `Socket` class, `send_all`/`recv_all`, `getaddrinfo` |
 | 27 | Memory-Mapped Files | `MmapRegion` RAII, file-backed/anonymous, `MAP_SHARED`, `msync` |
 | 28 | I/O Multiplexing | `select`/`poll`/`epoll`, RAII wrappers, `O_NONBLOCK`, multi-client server |
-| 29 | std::atomic | `atomic<T>`, `fetch_add`, CAS, `memory_order`, `atomic_flag`, lock-free stack |
+| 29 | std::atomic | `atomic<T>`, `fetch_add`, CAS (Compare-And-Swap), `memory_order`, `atomic_flag`, lock-free stack |
 | 30 | Semaphores | POSIX `sem_t` + C++20 `counting_semaphore`/`binary_semaphore` |
 | 31 | Dynamic Loading | `dlopen`/`dlsym`, RAII `DynLib`, plugin pattern, `RTLD_DEFAULT` |
-| 32 | std::regex | `regex_search/match/replace`, `smatch`, `sregex_iterator`, ERE patterns |
+| 32 | std::regex | `regex_search/match/replace`, `smatch`, `sregex_iterator`, ERE (Extended Regular Expression) patterns |
 | 33 | std::filesystem | `path`, `directory_iterator`, `create_directories`, `remove_all`, `error_code` |
 
 ---
@@ -117,8 +117,10 @@ valgrind: all
 	done
 
 clean:
-	@find exercises topics -type f ! -name '*.cpp' ! -name '*.hpp' ! -name '*.h' ! -name 'Makefile' -delete
+	@find exercises topics -type f ! -name '*.cpp' ! -name '*.hpp' ! -name '*.h' ! -name '*.md' ! -name 'Makefile' -delete
 ```
+
+> **Note:** This is a simplified illustration. The actual root `Makefile` also manages per-exercise sub-Makefiles via a `_MANAGED` variable and delegates `all`/`clean` to them.
 
 ### Flags explained
 
@@ -129,8 +131,8 @@ clean:
 | `-Wpedantic` | Strict ISO C++ compliance |
 | `-std=c++17` | C++17 (structured bindings, `string_view`, `filesystem`, `optional`, `variant`) |
 | `-g` | Debug symbols for `gdb` / valgrind |
-| `-pthread` | Thread support (exercises 24, 29, 30) |
-| `-ldl` | Dynamic loading (exercise 31) |
+| `-pthread` | Thread support — per-exercise flag (exercises 24, 29, 30), not in root `CXXFLAGS` |
+| `-ldl` | Dynamic loading — per-exercise flag (exercise 31), not in root `CXXFLAGS` |
 
 ### Per-exercise Makefiles
 

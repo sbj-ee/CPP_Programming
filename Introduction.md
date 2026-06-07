@@ -7,7 +7,7 @@ can read a `struct`, understand pointers, and write a `Makefile`, you are ready.
 need prior C++ experience.
 
 The exercises do not teach C from scratch — they assume you already understand memory,
-the stack, the preprocessor, and POSIX. What they teach is how C++ changes, extends, and
+the stack, the preprocessor, and POSIX (Portable Operating System Interface). What they teach is how C++ changes, extends, and
 improves on that foundation.
 
 ## Philosophy
@@ -75,7 +75,7 @@ Direct analogs to C concepts, with C++ idioms introduced at each step.
 | 05 | Strings & Vectors | `std::string`, `string_view`, `vector`, `array` |
 | 06 | Pointers & References | References as safer pointers; `nullptr`; const variants |
 | 07 | Classes | `class` with constructors, destructor, `const` member functions |
-| 08 | Memory Management | RAII; `unique_ptr`, `shared_ptr`, `weak_ptr` |
+| 08 | Memory Management | RAII (Resource Acquisition Is Initialization); `unique_ptr`, `shared_ptr`, `weak_ptr` |
 | 09 | File I/O | `fstream` replaces `FILE*`; RAII auto-closes |
 
 ### Tier 2 — Object-Oriented C++ (10–18)
@@ -149,7 +149,7 @@ changes in the C++ version:
 
 ## Every File Has
 
-- A single `.cpp` source file with six named sections
+- A single `.cpp` source file with at least six named sections
 - A local `Makefile` that builds it with the correct flags
 - Zero compiler warnings under `-Wall -Wextra -Wpedantic`
 - No `using namespace std;` at file scope

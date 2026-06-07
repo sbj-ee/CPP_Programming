@@ -29,7 +29,7 @@ He said this as a joke. But he also spent decades adding `unique_ptr`, `optional
 ## The Standard Committee
 
 C++ is not controlled by one person or company. The ISO C++ standardisation committee
-(WG21) has produced five major standards since 1998: C++98, C++11, C++14, C++17, C++20,
+(WG21) has produced six major standards since 1998: C++98, C++11, C++14, C++17, C++20,
 and C++23. Each one has added features that changed how the language is actually written.
 
 C++11 was the watershed. It added move semantics, lambdas, `auto`, range-based `for`,
