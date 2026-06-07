@@ -29,5 +29,5 @@ valgrind: all
 	@for d in $(_MANAGED); do $(MAKE) -C $$d valgrind; done
 
 clean:
-	@find exercises topics -type f ! -name '*.cpp' ! -name '*.hpp' ! -name '*.h' ! -name 'Makefile' -delete
+	@find exercises topics -type f ! -name '*.cpp' ! -name '*.hpp' ! -name '*.h' ! -name '*.md' ! -name 'Makefile' -delete
 	@for d in $(_MANAGED); do $(MAKE) -C $$d clean; done
