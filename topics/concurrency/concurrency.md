@@ -92,7 +92,7 @@ mtx.try_lock();   // returns false immediately if locked
     // ...
 }   // unlocks automatically (even on exception)
 
-// C++17: CTAD
+// C++17: CTAD (Class Template Argument Deduction)
 std::lock_guard lock(mtx);
 ```
 

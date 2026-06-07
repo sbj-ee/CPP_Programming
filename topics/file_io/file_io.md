@@ -157,7 +157,7 @@ std::streampos wpos = out.tellp();
 // Get file size
 std::ifstream fin("file.bin", std::ios::binary);
 fin.seekg(0, std::ios::end);
-std::streamsize sz = fin.tellg();
+std::streampos sz = fin.tellg();   // tellg() returns streampos, not streamsize
 fin.seekg(0, std::ios::beg);
 ```
 

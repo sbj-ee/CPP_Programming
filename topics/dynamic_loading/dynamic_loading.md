@@ -155,6 +155,9 @@ public:
     }
 
     // Typed function pointer lookup
+    // Note: casting void* to a function pointer via reinterpret_cast is technically
+    // UB (Undefined Behaviour) in ISO C++, but is POSIX-blessed and works on all
+    // mainstream platforms. Strict-conformance alternative: memcpy(&fp, &sym, sizeof fp).
     template<typename Signature>
     std::function<Signature> func(const std::string& name) const {
         using FP = Signature*;

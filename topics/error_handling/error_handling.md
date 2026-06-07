@@ -123,8 +123,8 @@ void h() noexcept(false);    // may throw (default)
 
 // Conditional noexcept
 template<typename T>
-void swap(T& a, T& b) noexcept(noexcept(T(std::move(a))));
-// noexcept if move constructor is noexcept
+void swap(T& a, T& b) noexcept(noexcept(T(std::move(a))) && noexcept(a = std::move(b)));
+// noexcept if both move constructor and move assignment are noexcept
 
 // Check at compile time
 static_assert(noexcept(f()));  // true

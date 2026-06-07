@@ -264,9 +264,10 @@ s += 'x';      // OK in modern compilers
 s.push_back('x');  // slightly clearer
 
 // 6. SSO (Small String Optimisation)
-// Short strings (typically <=15 chars) stored inline in the string object.
-// Taking &s[0] is always valid, but moving the string object invalidates
-// pointers when SSO kicks in (the buffer moves with the object).
+// Short strings (typically <=15 chars) stored inline in the string object itself.
+// Taking &s[0] is valid, but if SSO is active, moving the string object to a new
+// address (e.g., into a vector on reallocation) relocates that inline buffer,
+// leaving any raw pointer taken before the move dangling.
 
 // 7. stoi/stod throw on invalid input
 try {

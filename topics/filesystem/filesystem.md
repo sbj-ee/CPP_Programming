@@ -63,6 +63,10 @@ if (ec) std::cerr << ec.message() << "\n";
 
 ```cpp
 auto ftime = fs::last_write_time(p);
+// Pre-C++20 workaround: file_clock and system_clock are different;
+// subtract file_clock::now() and add system_clock::now() to convert.
+// Note: the two ::now() calls happen at different instants — slight drift possible.
+// C++20 alternative: std::chrono::clock_cast<std::chrono::system_clock>(ftime)
 auto sctp  = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
                  ftime - fs::file_time_type::clock::now()
                        + std::chrono::system_clock::now());

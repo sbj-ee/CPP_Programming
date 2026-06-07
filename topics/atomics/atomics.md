@@ -14,11 +14,11 @@ ai.is_lock_free();    // true if hardware-native (no internal mutex)
 // Alternatively:
 std::atomic<int>::is_always_lock_free   // constexpr bool (C++17)
 
-// Types guaranteed lock-free on all conforming platforms:
-std::atomic<bool>
-std::atomic<char>
+// Only type standardly guaranteed lock-free on all conforming platforms:
 std::atomic_flag
-// Others (int, long, pointer) are lock-free on x86/ARM64 in practice
+// In practice, atomic<bool> and atomic<char> are always lock-free on x86/ARM64/RISC-V
+// (is_always_lock_free == true), but the C++ standard makes no such guarantee.
+// Others (int, long, pointer) are also lock-free on mainstream hardware.
 ```
 
 ---
@@ -260,9 +260,10 @@ volatile int flag = 0;   // WRONG: no memory barrier
 // volatile prevents compiler optimisation but doesn't prevent CPU reordering
 std::atomic<int> flag2{0};  // CORRECT
 
-// 3. std::atomic<double> has no fetch_add on many platforms
+// 3. C++17 and earlier: std::atomic<double> has no fetch_add (no hardware instruction on most platforms)
+// C++20 adds fetch_add/fetch_sub for float and double types.
 std::atomic<double> sum{0.0};
-// sum.fetch_add(x);  — may not compile; no hardware instruction
+// sum.fetch_add(x);  — pre-C++20: may not compile
 // Use CAS loop:
 double expected = sum.load();
 while (!sum.compare_exchange_weak(expected, expected + x)) { }

@@ -37,8 +37,9 @@ sem_getvalue(&sem, &val); // read current value
 #include <semaphore>
 
 // counting_semaphore<MaxVal> — template arg is compile-time max
-std::counting_semaphore<10> pool_sem{10};   // 10 slots
-std::counting_semaphore<>   csem{5};        // default max = implementation max
+std::counting_semaphore<10> pool_sem{10};   // 10 slots; LeastMaxValue is required
+// std::counting_semaphore<> csem{5};       // invalid: no default for LeastMaxValue
+std::counting_semaphore<std::numeric_limits<std::ptrdiff_t>::max()> csem{5};  // use max
 
 // binary_semaphore = counting_semaphore<1>
 std::binary_semaphore bsem{0};   // initial value 0 (locked)
