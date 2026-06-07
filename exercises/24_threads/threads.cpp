@@ -122,7 +122,7 @@ static void section2_race_condition() {
 // =============================================================================
 //
 // std::mutex protects a critical section: only one thread holds the lock at
-// a time.  std::lock_guard is an RAII wrapper: acquires on construction,
+// a time.  std::lock_guard is an RAII (Resource Acquisition Is Initialisation) wrapper: acquires on construction,
 // releases when it goes out of scope — even if an exception is thrown.
 //
 // Rule: always protect every access to shared mutable data with the same mutex.

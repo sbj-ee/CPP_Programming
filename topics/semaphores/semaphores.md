@@ -1,6 +1,6 @@
 # Semaphores — Cheat Sheet
 
-## POSIX `sem_t` API
+## POSIX (Portable Operating System Interface) `sem_t` API
 
 ```cpp
 #include <semaphore.h>
@@ -242,7 +242,7 @@ bsem.release();
 // Useful for signalling; mutex for mutual exclusion
 
 // 5. Semaphore starvation — no fairness guarantee
-// sem_post wakes one waiter; which one is implementation-defined (usually FIFO on Linux)
+// sem_post wakes one waiter; which one is implementation-defined (usually FIFO (First In, First Out) on Linux)
 
 // 6. Spurious wakeup from sem_timedwait on signal
 int rc;

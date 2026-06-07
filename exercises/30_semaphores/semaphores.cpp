@@ -1,5 +1,5 @@
 // =============================================================================
-// Exercise 30: Semaphores — POSIX sem_t and C++20 std::counting_semaphore
+// Exercise 30: Semaphores — POSIX (Portable Operating System Interface) sem_t and C++20 std::counting_semaphore
 // =============================================================================
 // Topics: concepts, unnamed sem_t basics, binary semaphore signal pattern,
 //         counting semaphore resource pool, sem_timedwait, named semaphores

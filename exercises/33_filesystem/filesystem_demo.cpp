@@ -255,11 +255,9 @@ static void section5_create_remove_copy() {
     fs::remove(src, ec);
     std::cout << "  remove(src):  src exists=" << fs::exists(src) << "\n";
 
-    // Temp file alternative: use mkstemp (POSIX) or generate unique path
-    fs::path tmpfile = tmp / fs::path("ex33_tmp_XXXXXX");
+    // Temp file alternative: use mkstemp (Portable Operating System Interface
+    // / POSIX) or generate a unique path. std::tmpnam is deprecated.
     {
-        // std::tmpnam is deprecated; use a combination of temp_directory_path +
-        // unique name.  Here we simulate with a fixed name for the demo.
         std::string name = (tmp / "ex33_tmpfile.dat").string();
         std::ofstream ofs(name);
         ofs << "temporary data\n";

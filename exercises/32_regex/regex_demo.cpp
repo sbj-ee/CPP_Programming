@@ -1,7 +1,7 @@
 // =============================================================================
 // Exercise 32: C++ Regular Expressions (<regex>)
 // =============================================================================
-// Topics: std::regex / std::smatch / std::cmatch, ERE by default,
+// Topics: std::regex / std::smatch / std::cmatch, ERE (Extended Regular Expression) by default,
 //         regex_search, capture groups, regex_replace, flags (icase, multiline),
 //         sregex_iterator scan loop, common patterns (IPv4, ISO date, C ident)
 //

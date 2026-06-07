@@ -61,7 +61,7 @@ a.compare(pos, len, b);       // compare substring
 ## Element Access
 
 ```cpp
-s[0]         // no bounds check; UB if out of range
+s[0]         // no bounds check; UB (Undefined Behaviour) if out of range
 s.at(0)      // bounds-checked; throws std::out_of_range
 s.front()    // first char
 s.back()     // last char

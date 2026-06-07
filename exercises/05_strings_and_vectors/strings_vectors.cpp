@@ -18,7 +18,7 @@ void section_string()
     // Construction
     std::string s1 = "Hello";
     std::string s2("World");
-    std::string s3(5, '*');              // "***" (5 stars)
+    std::string s3(5, '*');              // "*****" (5 stars)
     std::string s4 = s1;                 // copy construction
 
     std::cout << "s1=\"" << s1 << "\"  s2=\"" << s2

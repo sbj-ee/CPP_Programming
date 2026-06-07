@@ -1,4 +1,4 @@
-# Classes & OOP — Cheat Sheet
+# Classes & OOP (Object-Oriented Programming) — Cheat Sheet
 
 ## `class` vs `struct`
 
@@ -21,9 +21,9 @@ struct Point {
 
 class Widget {
 public:
-    // Default constructor
-    Widget() : x_(0), y_(0) {}
-    Widget() = default;   // compiler-generated (if no other ctor defined)
+    // Default constructor — pick ONE of these alternatives:
+    Widget() : x_(0), y_(0) {}       // user-defined
+    // Widget() = default;            // compiler-generated (if no other ctor defined)
 
     // Parameterised constructor
     Widget(int x, int y) : x_(x), y_(y) {}
@@ -32,14 +32,14 @@ public:
     Widget(int n) : Widget(n, n) {}   // delegates to Widget(int,int)
 
     // Converting constructor — single arg, implicit conversion
-    Widget(int x) : x_(x), y_(0) {}
-    // Prevent implicit conversion:
-    explicit Widget(int x) : x_(x), y_(0) {}
+    // Pick ONE of these alternatives:
+    Widget(int x) : x_(x), y_(0) {}  // allows implicit int→Widget conversion
+    // explicit Widget(int x) : x_(x), y_(0) {}  // prevents implicit conversion
 
-    // Copy constructor
-    Widget(const Widget& o) : x_(o.x_), y_(o.y_) {}
-    Widget(const Widget&) = default;   // compiler-generated
-    Widget(const Widget&) = delete;    // forbid copying
+    // Copy constructor — pick ONE of these alternatives:
+    Widget(const Widget& o) : x_(o.x_), y_(o.y_) {}  // user-defined
+    // Widget(const Widget&) = default;  // compiler-generated
+    // Widget(const Widget&) = delete;   // forbid copying
 
     // Move constructor (C++11)
     Widget(Widget&& o) noexcept : x_(o.x_), y_(o.y_) {}
@@ -332,7 +332,7 @@ void f(Animal& a) { a.speak(); }  // OK, virtual dispatch works
 class Base { };             // no virtual ~Base
 class Derived : public Base { int* p_; Derived() {p_=new int;} ~Derived() {delete p_;} };
 Base* b = new Derived();
-delete b;   // UB: ~Derived() not called, memory leak
+delete b;   // UB (Undefined Behaviour): ~Derived() not called, memory leak
 // Fix: virtual ~Base() {}
 
 // 3. Calling virtual function in constructor/destructor

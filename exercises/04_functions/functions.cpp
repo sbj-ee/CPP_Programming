@@ -80,7 +80,7 @@ void double_elements(std::vector<int>& v)
 // ── Section 5: Return by value vs. return by reference ───────────────────────
 
 // Return by value: safe; returns a copy (or moves).
-// RVO (Return Value Optimization) often eliminates the copy.
+// RVO (Return Value Optimisation) often eliminates the copy.
 std::string build_message(const std::string& who)
 {
     return "Hello from " + who;   // returned by value (RVO applies)

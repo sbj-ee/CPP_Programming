@@ -1,6 +1,6 @@
 # Dynamic Loading — Cheat Sheet
 
-> POSIX `dlopen`/`dlclose`/`dlsym` API is identical in C++. C++ adds a RAII `DynLib` class and typed helper methods for function pointers.
+> POSIX (Portable Operating System Interface) `dlopen`/`dlclose`/`dlsym` API is identical in C++. C++ adds a RAII `DynLib` class and typed helper methods for function pointers.
 
 ## Headers
 
@@ -42,7 +42,7 @@ if (err) {
 
 // Cast to the correct function pointer type
 using FuncType = int(*)(int, double);
-FuncType fn = reinterpret_cast<FuncType>(sym);
+FuncType fn = reinterpret_cast<FuncType>(sym);  // technically UB in ISO C++; see Pitfalls section for the memcpy workaround
 int result = fn(42, 3.14);
 
 // Close library (decrements reference count; freed when count reaches 0)
@@ -115,7 +115,7 @@ __attribute__((visibility("hidden")))  int private_fn();  // not exported
 
 ---
 
-## RAII `DynLib` Class (C++ Style)
+## RAII (Resource Acquisition Is Initialisation) `DynLib` Class (C++ Style)
 
 ```cpp
 class DynLib {
@@ -168,7 +168,7 @@ public:
     }
 
     void* get() const { return handle_; }
-    void release() { handle_ = nullptr; }
+    void* release() { void* h = handle_; handle_ = nullptr; return h; }
 private:
     DynLib() = default;
 };

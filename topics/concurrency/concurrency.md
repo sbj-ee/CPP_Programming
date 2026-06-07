@@ -51,7 +51,7 @@ std::thread t5([x]{ use(x); }); // capture by value: safe copy
 
 ---
 
-## RAII Thread Wrapper
+## RAII (Resource Acquisition Is Initialisation) Thread Wrapper
 
 ```cpp
 class ScopedThread {
@@ -226,7 +226,7 @@ counter.is_lock_free();  // true if hardware-native (no mutex inside)
 | `memory_order_consume` | Dependency-ordering load (rarely used) |
 | `memory_order_acquire` | Load; no reads/writes moved before this load |
 | `memory_order_release` | Store; no reads/writes moved after this store |
-| `memory_order_acq_rel` | Both acquire and release (for RMW ops) |
+| `memory_order_acq_rel` | Both acquire and release (for RMW (Read-Modify-Write) ops) |
 | `memory_order_seq_cst` | Total sequential ordering (default) |
 
 ```cpp
@@ -336,7 +336,7 @@ std::thread t2([&]{ ++shared; });  // RACE: UB
     std::thread t(f);
 }   // t destroyed without join/detach → std::terminate()
 
-// 6. std::atomic<double> has no fetch_add on all platforms
+// 6. pre-C++20: std::atomic<double> has no fetch_add; C++20 adds it
 // Use compare_exchange loop instead:
 std::atomic<double> sum{0.0};
 double expected = sum.load();

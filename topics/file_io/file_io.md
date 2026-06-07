@@ -52,7 +52,7 @@ if (!in.is_open()) {
 // Or open later
 std::ofstream out;
 out.open("out.txt", std::ios::out | std::ios::trunc);
-if (!out) { /* same as !out.is_open() */ }
+if (!out) { /* checks fail/bad state; not always same as !is_open() */ }
 
 // File closed automatically by destructor — no need for explicit close()
 // But you can close early:
@@ -287,7 +287,7 @@ struct Data { char c; int n; };   // likely has 3 bytes padding
 // Write full struct — padding bytes are junk but harmless if reader matches
 // Safer: write each field separately for portability
 
-// 7. Endianness — binary files written on x86 (LE) are not portable to BE systems
+// 7. Endianness — binary files written on x86 (LE (Little Endian)) are not portable to BE (Big Endian) systems
 // Use explicit byte-swapping or serialisation format (e.g. network byte order) for portability
 
 // 8. ofstream truncates by default — use ios::app to append

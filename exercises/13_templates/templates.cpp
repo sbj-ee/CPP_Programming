@@ -2,7 +2,7 @@
 // Exercise 13: Templates
 // =============================================================================
 // Topics: Function templates, class templates, template specialisation,
-//         non-type template parameters, typename vs class, CTAD (C++17),
+//         non-type template parameters, typename vs class, CTAD (Class Template Argument Deduction, C++17),
 //         variadic templates and fold expressions
 //
 // Build: g++ -Wall -Wextra -Wpedantic -std=c++17 -g templates.cpp -o templates
@@ -79,8 +79,8 @@ template <typename T>
 class Stack {
 public:
     void push(const T& value) {
+        if (top_ >= MAX) throw std::overflow_error("Stack overflow");
         data_[top_++] = value;
-        if (top_ > MAX) throw std::overflow_error("Stack overflow");
     }
 
     void pop() {

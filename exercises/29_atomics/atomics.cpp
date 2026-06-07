@@ -2,7 +2,7 @@
 // Exercise 29: C++ Atomics (<atomic>)
 // =============================================================================
 // Topics: std::atomic<T> types, load/store/fetch_add, race vs atomic counter,
-//         compare_exchange_strong/weak + CAS loop (atomic max),
+//         compare_exchange_strong/weak + CAS (Compare-And-Swap) loop (atomic max),
 //         std::memory_order table, std::atomic_flag spinlock,
 //         lock-free Treiber stack
 //
@@ -275,7 +275,7 @@ static void section5_spinlock() {
 // A Treiber stack is a lock-free LIFO data structure using a single atomic
 // pointer (top of stack).  push/pop both use a CAS loop.
 //
-// NOTE: This implementation has the ABA problem — not safe for general use
+// NOTE: This implementation has the ABA (A-B-A state: a value changes A→B→A between reads) problem — not safe for general use
 // without hazard pointers or tagged pointers.  Shown here as a teaching example.
 
 template<typename T>

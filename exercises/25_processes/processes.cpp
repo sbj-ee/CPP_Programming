@@ -1,5 +1,5 @@
 // =============================================================================
-// Exercise 25: POSIX Process Control in C++
+// Exercise 25: POSIX (Portable Operating System Interface) Process Control in C++
 // =============================================================================
 // Topics: fork/waitpid, execvp, pipes (unidirectional + bidirectional),
 //         popen/pclose, RAII pipe wrapper, zombie reaping, FD_CLOEXEC

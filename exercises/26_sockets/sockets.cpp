@@ -1,8 +1,8 @@
 // =============================================================================
 // Exercise 26: POSIX Sockets in C++ with RAII
 // =============================================================================
-// Topics: Socket RAII class, TCP loopback with length-prefix framing,
-//         UDP sendto/recvfrom, AF_UNIX domain sockets, getaddrinfo loop,
+// Topics: Socket RAII class, TCP (Transmission Control Protocol) loopback with length-prefix framing,
+//         UDP (User Datagram Protocol) sendto/recvfrom, AF_UNIX domain sockets, getaddrinfo loop,
 //         SIGPIPE/MSG_NOSIGNAL, SO_REUSEADDR, partial send/recv
 //
 // Build: g++ -Wall -Wextra -Wpedantic -std=c++17 -g sockets.cpp -o sockets
@@ -125,7 +125,7 @@ static void section1_concepts() {
     std::cout << "\n=== Section 1: Socket concepts ===\n";
 
     std::cout << "  Byte order:\n";
-    std::cout << "    Network byte order = big-endian (MSB first).\n";
+    std::cout << "    Network byte order = big-endian (MSB (Most Significant Byte) first).\n";
     std::cout << "    htons(x) converts host->network short (16-bit).\n";
     std::cout << "    htonl(x) converts host->network long  (32-bit).\n";
     std::cout << "    ntohs/ntohl convert the reverse direction.\n";

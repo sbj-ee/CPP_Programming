@@ -114,7 +114,7 @@ ptrdiff_t diff = p - arr;  // 3 — difference in elements, not bytes
 for (int* q = arr; q != arr + 4; ++q) { /* *q */ }
 
 // One-past-the-end is valid to form but not dereference:
-int* end = arr + 4;  // valid; *end is UB
+int* end = arr + 4;  // valid; *end is UB (Undefined Behaviour)
 ```
 
 ---
@@ -128,7 +128,10 @@ cmp = [](int a, int b) { return a - b; };  // assign (no captures allowed)
 
 // Simpler with typedef / using:
 using Comparator = int(*)(int, int);
-Comparator c = strcmp;   // (for char* version)
+// Comparator c = strcmp;  // won't compile — strcmp is int(const char*, const char*)
+// Use a matching signature instead:
+int cmp_ints(int a, int b) { return a - b; }
+Comparator c = cmp_ints;
 
 // Call:
 int result = cmp(3, 5);  // or (*cmp)(3, 5)
@@ -228,7 +231,7 @@ int* worse() {
 
 // 3. Null dereference
 int* p = nullptr;
-*p = 5;   // crash (SIGSEGV)
+*p = 5;   // crash (SIGSEGV (Segmentation Fault signal))
 // Always check before deref or guarantee non-null
 
 // 4. Object slicing (pointer/reference avoids it)

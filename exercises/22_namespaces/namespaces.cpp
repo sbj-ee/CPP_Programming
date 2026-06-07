@@ -280,7 +280,7 @@ void run_with_callback(c_callback cb, int value) {
     cb(value);
 }
 
-// A compatible callback (must use extern "C" for ABI correctness in real use)
+// A compatible callback (must use extern "C" for ABI (Application Binary Interface) correctness in real use)
 extern "C" void my_callback(int x) {
     std::cout << "  C callback received: " << x << "\n";
 }

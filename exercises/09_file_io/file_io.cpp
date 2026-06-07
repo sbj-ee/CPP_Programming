@@ -1,6 +1,6 @@
 // file_io.cpp - Exercise 09: File I/O
 // Demonstrates: ifstream/ofstream/fstream, text I/O, binary I/O,
-//               stringstream, error checking, RAII close, filesystem temp
+//               stringstream, error checking, RAII (Resource Acquisition Is Initialisation) close, filesystem temp
 
 #include <iostream>
 #include <fstream>        // ifstream, ofstream, fstream

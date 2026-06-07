@@ -229,7 +229,7 @@ void section_dangling()
 
     std::cout << "Safe practices:\n";
     std::cout << "  1. Set pointer to nullptr after delete.\n";
-    std::cout << "  2. Prefer RAII (smart pointers) over raw new/delete.\n";
+    std::cout << "  2. Prefer RAII (Resource Acquisition Is Initialisation) via smart pointers over raw new/delete.\n";
     std::cout << "  3. Never return a pointer/reference to a local variable.\n";
 
     // Safe demonstration: valid pointer, then set to nullptr after use

@@ -83,12 +83,12 @@ fs::remove_all("dir/");                    // recursive delete; returns count
 
 fs::copy("src.txt", "dst.txt");                        // copy file
 fs::copy("src/", "dst/", fs::copy_options::recursive); // copy directory tree
-fs::copy_options:
-    none                 // fail if dest exists
-    skip_existing        // silently skip
-    overwrite_existing   // overwrite
-    update_existing      // overwrite only if src newer
-    recursive            // recurse into subdirs
+// fs::copy_options values:
+//   none                — fail if dest exists (default)
+//   skip_existing       — silently skip
+//   overwrite_existing  — overwrite
+//   update_existing     — overwrite only if src newer
+//   recursive           — recurse into subdirs
 
 fs::rename("old.txt", "new.txt");          // move / rename (same filesystem = atomic)
 ```
@@ -195,7 +195,7 @@ if (ec) { /* handle */ }
 | `fs::canonical` on non-existent path | Use `fs::weakly_canonical` instead (doesn't require existence) |
 | `file_size` on directory | Returns 0 or implementation-defined; don't rely on it |
 | Symlink vs target confusion | `is_symlink` + `read_symlink`; `status` follows links, `symlink_status` doesn't |
-| TOCTOU: check then act | Prefer error-code overloads and handle errors, not pre-checking |
+| TOCTOU (Time-Of-Check Time-Of-Use): check then act | Prefer error-code overloads and handle errors, not pre-checking |
 | `remove_all` on wrong path | Double-check `is_directory` and review path before calling |
 | Platform path separators | Use `generic_string()` for portable display; `string()` for OS APIs |
 | Old GCC requires `-lstdc++fs` | GCC 9+ includes it in the default link; GCC 8 needs explicit flag |

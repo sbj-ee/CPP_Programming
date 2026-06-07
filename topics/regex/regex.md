@@ -23,8 +23,8 @@ std::regex re("hello",
 | Flag | Grammar |
 |------|---------|
 | `std::regex::ECMAScript` | ECMAScript/Perl-like (default) |
-| `std::regex::basic` | POSIX BRE |
-| `std::regex::extended` | POSIX ERE |
+| `std::regex::basic` | POSIX (Portable Operating System Interface) BRE (Basic Regular Expression) |
+| `std::regex::extended` | POSIX ERE (Extended Regular Expression) |
 | `std::regex::grep` | POSIX grep |
 | `std::regex::egrep` | POSIX egrep |
 | `std::regex::awk` | POSIX awk |

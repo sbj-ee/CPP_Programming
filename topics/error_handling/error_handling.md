@@ -159,7 +159,7 @@ void append_all(std::vector<int>& v, const std::vector<int>& src) {
 
 ---
 
-## RAII Ensures Cleanup on Exception
+## RAII (Resource Acquisition Is Initialisation) Ensures Cleanup on Exception
 
 ```cpp
 void f() {
@@ -198,7 +198,7 @@ std::optional<int> result = find_index(v, 42);
 result.has_value()          // or: (bool)result
 result.value()              // throws std::bad_optional_access if empty
 result.value_or(-1)         // default if empty
-*result                     // UB if empty; use has_value() first
+*result                     // UB (Undefined Behaviour) if empty; use has_value() first
 
 // In-place construction
 std::optional<std::string> os(std::in_place, "hello");

@@ -1,5 +1,5 @@
 // =============================================================================
-// Exercise 27: POSIX mmap in C++ with RAII
+// Exercise 27: POSIX (Portable Operating System Interface) mmap in C++ with RAII
 // =============================================================================
 // Topics: MmapRegion RAII class, file-backed read-only, MAP_SHARED write with
 //         msync, anonymous private mapping, shared memory across fork,
@@ -251,7 +251,7 @@ static void section4_anonymous() {
 //
 // MAP_SHARED + MAP_ANONYMOUS creates a region shared between parent and child
 // after fork().  The child's writes are immediately visible to the parent.
-// This is the simplest form of IPC for related processes.
+// This is the simplest form of IPC (Inter-Process Communication) for related processes.
 
 static void section5_shared_fork() {
     std::cout << "\n=== Section 5: Shared memory across fork ===\n";

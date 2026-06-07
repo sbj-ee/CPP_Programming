@@ -1,5 +1,5 @@
 // =============================================================================
-// Exercise 15: STL Algorithms
+// Exercise 15: STL (Standard Template Library) Algorithms
 // =============================================================================
 // Topics: sort/stable_sort, find/find_if/count_if, transform, accumulate/reduce,
 //         copy/copy_if, for_each, lower_bound/upper_bound/binary_search,

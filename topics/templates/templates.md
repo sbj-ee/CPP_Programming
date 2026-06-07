@@ -139,10 +139,10 @@ int i = 5;
 g(i);       // T = int&;  x is int&
 g(5);       // T = int;   x is int&&
 
-// CTAD — class template argument deduction (C++17)
+// CTAD (Class Template Argument Deduction, C++17) — compiler deduces template args
 std::pair p(1, 3.14);        // pair<int,double> — deduced
 std::vector v = {1,2,3};     // vector<int>
-Stack s = Stack<int>{};      // or with deduction guides
+Stack s{42};                 // deduced via user-provided deduction guide
 std::tuple t(1, 'a', 2.0);  // tuple<int,char,double>
 
 // Custom deduction guide
@@ -167,9 +167,9 @@ void process(T val) {
     }
 }
 
-// Replaces SFINAE for simple cases; cleaner than specialisation
+// Replaces SFINAE (Substitution Failure Is Not An Error) for simple cases
 template<typename T>
-T stringify(T x) {
+std::string stringify(T x) {
     if constexpr (std::is_same_v<T, bool>) return x ? "true" : "false";
     else return std::to_string(x);
 }
@@ -231,7 +231,7 @@ void print_sep(Ts... vals) {
 
 ---
 
-## SFINAE & `std::enable_if`
+## SFINAE (Substitution Failure Is Not An Error) & `std::enable_if`
 
 ```cpp
 #include <type_traits>
@@ -294,7 +294,7 @@ auto max_val(auto a, auto b) { return a > b ? a : b; }
 // Linker can't find definition if template is defined in .cpp and used elsewhere.
 // All template definitions must be visible at instantiation point.
 // Exception: explicit instantiation in .cpp:
-template class Stack<int>;   // instantiates in this TU only
+template class Stack<int>;   // instantiates in this TU (Translation Unit) only
 
 // 2. Code bloat
 // Each instantiation generates separate code.

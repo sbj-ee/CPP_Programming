@@ -130,7 +130,7 @@ std::numeric_limits<int>::lowest()    // same as min() for integers
 std::numeric_limits<double>::max()    // ~1.8e308
 std::numeric_limits<double>::lowest() // ~-1.8e308 (negative)
 std::numeric_limits<double>::min()    // ~2.2e-308 (smallest positive normal)
-std::numeric_limits<double>::epsilon()// ~2.2e-16 (ULP at 1.0)
+std::numeric_limits<double>::epsilon()// ~2.2e-16 (ULP (Unit in the Last Place) at 1.0)
 std::numeric_limits<double>::infinity()
 std::numeric_limits<int>::is_signed   // true
 std::numeric_limits<int>::digits      // 31 (binary digits, excluding sign)
@@ -177,7 +177,7 @@ Derived& dr = dynamic_cast<Derived&>(*b); // throws std::bad_cast if fails
 
 // const_cast — add/remove const (only valid if object was non-const)
 const int ci = 5;
-int* pi = const_cast<int*>(&ci);  // UB if you write through pi!
+int* pi = const_cast<int*>(&ci);  // UB (Undefined Behaviour) if you write through pi!
 
 // reinterpret_cast — raw bit reinterpretation; almost always unsafe
 uint64_t bits = reinterpret_cast<uint64_t>(ptr);
@@ -257,7 +257,7 @@ decltype(auto) bad() { int x = 0; return (x); }  // returns int& to local!
 
 // 5. constexpr function called at runtime — result not guaranteed CT
 constexpr int sq(int x) { return x*x; }
-int n = sq(5);   // may be evaluated at run time; use consteval to force CT
+int n = sq(5);   // may be evaluated at run time; use consteval to force CT (Compile Time)
 
 // 6. Integer overflow (signed UB)
 int big = INT_MAX + 1;   // undefined behaviour

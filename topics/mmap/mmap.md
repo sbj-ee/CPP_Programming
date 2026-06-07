@@ -1,4 +1,4 @@
-# Memory-Mapped Files (POSIX) — Cheat Sheet
+# Memory-Mapped Files (POSIX (Portable Operating System Interface)) — Cheat Sheet
 
 > POSIX `mmap` API is identical in C++. C++ adds a RAII `MmapRegion` class with automatic `munmap` in the destructor, and typed span access.
 
@@ -189,7 +189,7 @@ munlock(ptr, len);
 
 ---
 
-## RAII `MmapRegion` Class (C++ Style)
+## RAII (Resource Acquisition Is Initialisation) `MmapRegion` Class (C++ Style)
 
 ```cpp
 class MmapRegion {
@@ -295,7 +295,7 @@ shm_unlink("/myapp_shm");
 size_t page = sysconf(_SC_PAGESIZE);
 size_t aligned_off = (offset / page) * page;    // round down to page boundary
 size_t delta = offset - aligned_off;             // extra bytes at start
-char* p = (char*)mmap(nullptr, len + delta, PROT_READ, MAP_PRIVATE, fd, aligned_off);
+char* p = static_cast<char*>(mmap(nullptr, len + delta, PROT_READ, MAP_PRIVATE, fd, aligned_off));
 char* data = p + delta;   // actual start of desired data
 
 // 2. Accessing beyond mapped length → SIGBUS or SIGSEGV
@@ -308,7 +308,7 @@ msync(ptr, len, MS_SYNC);
 // 4. File shrunk after mapping → SIGBUS on access to removed pages
 // Avoid ftruncate(shrink) while mapped
 
-// 5. Reinterpret cast for unaligned struct access → UB
+// 5. Reinterpret cast for unaligned struct access → UB (Undefined Behaviour)
 // Use memcpy instead of pointer cast for strict-aliasing safety
 SomeStruct s;
 std::memcpy(&s, ptr + offset, sizeof(s));   // safe

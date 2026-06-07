@@ -1,4 +1,4 @@
-# I/O Multiplexing (POSIX) — Cheat Sheet
+# I/O Multiplexing (POSIX (Portable Operating System Interface)) — Cheat Sheet
 
 > POSIX I/O multiplexing APIs (`select`, `poll`, `epoll`) are identical in C++. C++ adds RAII `EpollFd` and `PipePair` classes for safe resource management.
 
@@ -209,7 +209,7 @@ ev.data.ptr = conn;
 
 ---
 
-## RAII Wrappers (C++ Style)
+## RAII (Resource Acquisition Is Initialisation) Wrappers (C++ Style)
 
 ### RAII `EpollFd`
 

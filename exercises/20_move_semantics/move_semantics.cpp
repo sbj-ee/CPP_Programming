@@ -246,9 +246,10 @@ void demo_forward() {
 // SECTION 6: Return Value Optimisation (RVO / NRVO)
 // =============================================================================
 //
-// RVO (Named Return Value Optimisation): the compiler constructs the return
+// RVO (Return Value Optimisation): the compiler constructs the return
 // value directly in the caller's storage — no copy or move at all.
-// NRVO is the "Named" variant where the named local variable is elided.
+// NRVO (Named Return Value Optimisation) is the variant where a named
+// local variable is elided.
 // In C++17, copy elision in certain contexts is MANDATORY (prvalue elision).
 //
 // Rule: return local variables by value WITHOUT std::move — adding std::move

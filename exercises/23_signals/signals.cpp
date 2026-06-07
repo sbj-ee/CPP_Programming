@@ -1,5 +1,5 @@
 // =============================================================================
-// Exercise 23: POSIX Signals in C++
+// Exercise 23: POSIX (Portable Operating System Interface) Signals in C++
 // =============================================================================
 // Topics: signal table, signal()/raise()/SIG_IGN, sig_atomic_t flag pattern,
 //         sigaction() with SA_RESTART/SA_SIGINFO, sigprocmask blocking,

@@ -1,4 +1,4 @@
-# Process Control (POSIX) — Cheat Sheet
+# Process Control (POSIX (Portable Operating System Interface)) — Cheat Sheet
 
 > POSIX process APIs are identical in C++. C++ adds RAII wrappers, `std::string` for args, and safer resource management.
 
@@ -31,7 +31,7 @@ if (pid == 0) {
     child_work();
     _exit(0);   // use _exit, not exit(), in child to avoid double-flush of stdio
 }
-// Parent process — pid > 0 (child's PID)
+// Parent process — pid > 0 (child's PID (Process Identifier))
 parent_work();
 ```
 
@@ -138,7 +138,7 @@ waitpid(pid, nullptr, 0);
 
 ---
 
-## RAII Wrappers (C++ Style)
+## RAII (Resource Acquisition Is Initialisation) Wrappers (C++ Style)
 
 ### RAII Pipe
 

@@ -74,7 +74,10 @@ public:
     // Allow move
     FileHandle(FileHandle&& o) noexcept : f_(o.f_) { o.f_ = nullptr; }
     FileHandle& operator=(FileHandle&& o) noexcept {
-        if (this != &o) { std::fclose(f_); f_ = o.f_; o.f_ = nullptr; }
+        if (this != &o) {
+            if (f_) std::fclose(f_);   // guard: moved-from object has f_=nullptr
+            f_ = o.f_; o.f_ = nullptr;
+        }
         return *this;
     }
 
@@ -273,7 +276,7 @@ obj->~MyClass();
 // 1. Double delete
 int* p = new int(5);
 delete p;
-delete p;   // UB: heap corruption
+delete p;   // UB (Undefined Behaviour): heap corruption
 
 // 2. delete[] mismatch
 int* arr = new int[10];
@@ -302,6 +305,6 @@ Foo* raw = sp.get();
 int x = 5;
 // shared_ptr<int> sp(&x);  // NEVER: will try to delete stack variable
 
-// 8. Returning unique_ptr by value is fine (NRVO / move)
+// 8. Returning unique_ptr by value is fine (NRVO (Named Return Value Optimisation) / move)
 std::unique_ptr<int> make() { return std::make_unique<int>(7); }  // OK
 ```

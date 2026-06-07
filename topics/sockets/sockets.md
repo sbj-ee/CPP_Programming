@@ -1,4 +1,4 @@
-# Sockets (POSIX) — Cheat Sheet
+# Sockets (POSIX (Portable Operating System Interface)) — Cheat Sheet
 
 > POSIX socket API is identical in C++. C++ adds RAII `Socket` classes, `std::string` for messages, and `send_all`/`recv_all` helpers.
 
@@ -23,9 +23,9 @@
 
 ```cpp
 // socket(domain, type, protocol)
-int fd = socket(AF_INET,   SOCK_STREAM, 0);   // IPv4 TCP
+int fd = socket(AF_INET,   SOCK_STREAM, 0);   // IPv4 TCP (Transmission Control Protocol)
 int fd = socket(AF_INET6,  SOCK_STREAM, 0);   // IPv6 TCP
-int fd = socket(AF_INET,   SOCK_DGRAM,  0);   // IPv4 UDP
+int fd = socket(AF_INET,   SOCK_DGRAM,  0);   // IPv4 UDP (User Datagram Protocol)
 int fd = socket(AF_UNIX,   SOCK_STREAM, 0);   // Unix domain
 
 if (fd == -1) throw std::runtime_error(std::string("socket: ") + strerror(errno));
@@ -172,7 +172,7 @@ setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
 ---
 
-## RAII Socket Class (C++ Style)
+## RAII (Resource Acquisition Is Initialisation) Socket Class (C++ Style)
 
 ```cpp
 class Socket {
@@ -190,7 +190,10 @@ public:
     Socket& operator=(const Socket&) = delete;
     Socket(Socket&& o) noexcept : fd_(o.fd_) { o.fd_ = -1; }
     Socket& operator=(Socket&& o) noexcept {
-        if (this != &o) { ::close(fd_); fd_ = o.fd_; o.fd_ = -1; }
+        if (this != &o) {
+            if (fd_ >= 0) ::close(fd_);  // guard: don't close -1
+            fd_ = o.fd_; o.fd_ = -1;
+        }
         return *this;
     }
 

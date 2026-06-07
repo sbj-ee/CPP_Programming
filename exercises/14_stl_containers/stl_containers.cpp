@@ -1,5 +1,5 @@
 // =============================================================================
-// Exercise 14: STL Containers
+// Exercise 14: STL (Standard Template Library) Containers
 // =============================================================================
 // Topics: vector, deque, list, map, unordered_map, set, unordered_set,
 //         iteration (range-for and iterators), container adapters
@@ -259,8 +259,8 @@ void demo_iteration() {
 // Container adapters are wrappers that restrict the interface of an underlying
 // container (vector, deque, list) to enforce a specific access pattern.
 //
-// std::stack  — LIFO; push/pop/top
-// std::queue  — FIFO; push/pop/front/back
+// std::stack  — LIFO (Last In, First Out); push/pop/top
+// std::queue  — FIFO (First In, First Out); push/pop/front/back
 // std::priority_queue — max-heap by default; push/pop/top
 
 void demo_adapters() {

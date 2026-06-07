@@ -67,7 +67,7 @@ int expected = 0;
 bool ok = x.compare_exchange_strong(expected, 1);
 
 // compare_exchange_weak — may spuriously fail even if equal
-// Faster on some platforms (LL/SC architectures); use in loops
+// Faster on some platforms (LL/SC (Load-Link/Store-Conditional) architectures); use in loops
 int expected = 0;
 while (!x.compare_exchange_weak(expected, expected * 2)) {
     // expected was updated to current x — retry
@@ -115,7 +115,7 @@ Release-Acquire pairing:
 
 ### Typical Orderings by Use Case
 
-| Use Case | Load | Store | RMW |
+| Use Case | Load | Store | RMW (Read-Modify-Write) |
 |----------|------|-------|-----|
 | Counter (no inter-thread data) | relaxed | relaxed | relaxed |
 | Producer/consumer flag | acquire | release | acq_rel |
@@ -226,7 +226,7 @@ public:
         return false;  // empty
     }
 
-    // WARNING: suffers from ABA problem — see pitfalls
+    // WARNING: suffers from the ABA (A-B-A) problem — see pitfalls
 };
 ```
 
