@@ -108,6 +108,7 @@ inline double clamp(double v, double lo, double hi)
 // ── Section 7: Recursion ──────────────────────────────────────────────────────
 
 // Recursive factorial: n! = n * (n-1)!
+// NOTE: undefined for n < 0; guard (n <= 1) returns 1 for both 0!, 1!, and negative n.
 long long factorial(int n)
 {
     if (n <= 1) return 1;

@@ -138,6 +138,8 @@ static void section3_status() {
             // last_write_time returns a file_time_type (std::chrono)
             auto lwt = fs::last_write_time(c.path, ec);
             // Convert to system_clock time_point for display
+            // Pre-C++20 approx: two different clocks queried separately — may drift slightly.
+            // C++20 alternative: std::chrono::clock_cast<std::chrono::system_clock>(lwt)
             auto sctp = std::chrono::time_point_cast<std::chrono::seconds>(
                 lwt - fs::file_time_type::clock::now()
                     + std::chrono::system_clock::now());

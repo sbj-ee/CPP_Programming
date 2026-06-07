@@ -219,6 +219,7 @@ void section_split()
 
     std::string csv = "Alice,Bob,,Carol,Dave";
     std::vector<std::string> parts = split(csv, ',');
+    // Note: split() skips empty tokens — the double comma yields 4 results, not 5.
     std::cout << "Split \"" << csv << "\" by ',':\n";
     for (std::size_t i = 0; i < parts.size(); ++i)
         std::cout << "  [" << i << "] \"" << parts[i] << "\"\n";

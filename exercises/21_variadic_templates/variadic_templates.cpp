@@ -201,11 +201,15 @@ void print_tuple(const std::tuple<Ts...>& t) {
     print_tuple_impl(t, std::make_index_sequence<sizeof...(Ts)>{});
 }
 
-// Convert tuple to array (all elements must be the same type)
-template <typename T, std::size_t N, std::size_t... Is>
-std::array<T, N> tuple_to_array_impl(const std::tuple<T, T, T>& t,
-                                      std::index_sequence<Is...>) {
+// Convert homogeneous tuple to array (all elements must be the same type T)
+template <typename T, std::size_t... Is>
+std::array<T, sizeof...(Is)> tuple_to_array_impl(const std::tuple<T, T, T>& t,
+                                                  std::index_sequence<Is...>) {
     return {std::get<Is>(t)...};
+}
+template <typename T>
+std::array<T, 3> tuple_to_array(const std::tuple<T, T, T>& t) {
+    return tuple_to_array_impl(t, std::make_index_sequence<3>{});
 }
 
 void demo_index_sequence() {
@@ -220,6 +224,14 @@ void demo_index_sequence() {
         std::tuple_size<std::tuple<int,int,int,int,int>>::value;
     std::cout << "  make_index_sequence<5> would yield " << seq_size
               << " indices (0..4)\n";
+
+    // tuple_to_array: convert a homogeneous 3-tuple to std::array<int,3>
+    auto int_tuple = std::make_tuple(10, 20, 30);
+    auto arr = tuple_to_array(int_tuple);
+    std::cout << "  tuple_to_array({10,20,30}): [";
+    for (std::size_t i = 0; i < arr.size(); ++i)
+        std::cout << (i ? ", " : "") << arr[i];
+    std::cout << "]\n";
 }
 
 // =============================================================================

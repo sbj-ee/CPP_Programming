@@ -142,7 +142,10 @@ public:
         if (empty()) throw std::underflow_error("Stack<bool> underflow");
         --top_;
     }
-    bool   top()   const { return bits_[top_ - 1]; }
+    bool   top()   const {
+        if (empty()) throw std::underflow_error("Stack<bool> is empty");
+        return bits_[top_ - 1];
+    }
     bool   empty() const { return top_ == 0; }
     size_t size()  const { return top_; }
 

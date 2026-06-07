@@ -102,7 +102,8 @@ public:
     void print_hex(std::size_t n) const
     {
         std::size_t count = (n < size_) ? n : size_;
-        std::cout << "  Buffer[0.." << count-1 << "]: ";
+        if (count == 0) { std::cout << "  Buffer[]: (empty)\n"; return; }
+        std::cout << "  Buffer[0.." << count-1 << "]: ";  // safe: count >= 1
         for (std::size_t i = 0; i < count; ++i)
             std::cout << std::hex << (static_cast<unsigned>(data_[i]) & 0xFF) << " ";
         std::cout << std::dec << "\n";
