@@ -1,5 +1,7 @@
 # C++ Programming
 
+*Topics: cpp, cplusplus, learning, education, systems-programming, tutorial, exercises*
+
 A structured C++ programming learning project covering fundamentals through modern systems programming. Designed for someone who already knows C and wants to learn idiomatic C++.
 
 ## Layout
