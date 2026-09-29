@@ -16,6 +16,7 @@
 #include <cassert>
 #include <string>
 #include <sstream>
+#include <cstdint>   // uint64_t
 
 // =============================================================================
 // SECTION 1: std::atomic<T> types — load, store, fetch_add, fetch_sub
@@ -24,8 +25,10 @@
 // std::atomic<T> wraps a value with operations that the hardware performs
 // atomically — no partial reads or writes visible to other threads.
 //
-// Specialisations for all integral types, pointers, and bool are guaranteed
-// to be lock-free on most platforms (check with is_lock_free()).
+// Only std::atomic_flag is GUARANTEED lock-free by the standard.  In practice
+// the integral, pointer and bool specialisations are lock-free on all
+// mainstream platforms — check with is_lock_free() or the constexpr
+// std::atomic<T>::is_always_lock_free (C++17).
 //
 // Key operations:
 //   load(order)           — atomic read
@@ -42,7 +45,9 @@ static void section1_types() {
     std::atomic<long>     al{0};
     std::atomic<bool>     ab{false};
     std::atomic<uint64_t> au{0};
-    std::atomic<double>   ad{0.0};   // C++20 mandatory lock-free not guaranteed
+    std::atomic<double>   ad{0.0};   // valid since C++11 (load/store/exchange/CAS);
+                                     // fetch_add on floating types is C++20;
+                                     // lock-freedom is not guaranteed
 
     std::cout << "  atomic<int>  lock_free: "
               << (ai.is_lock_free() ? "yes" : "no") << "\n";
@@ -50,6 +55,8 @@ static void section1_types() {
               << (al.is_lock_free() ? "yes" : "no") << "\n";
     std::cout << "  atomic<bool> lock_free: "
               << (ab.is_lock_free() ? "yes" : "no") << "\n";
+    std::cout << "  atomic<u64>  lock_free: "
+              << (au.is_lock_free() ? "yes" : "no") << "\n";
     std::cout << "  atomic<double> lock_free: "
               << (ad.is_lock_free() ? "yes" : "no") << "\n";
 
@@ -74,11 +81,15 @@ static void section1_types() {
 // SECTION 2: Race condition vs std::atomic<long> counter (4 threads × 500K)
 // =============================================================================
 
+// *** INTENTIONAL DATA RACE (undefined behaviour) — for demonstration only. ***
+// racy_add() increments a plain long from several threads without
+// synchronisation.  ThreadSanitizer (-fsanitize=thread) WILL report a data
+// race on g_racy; that report is expected.  atomic_add() is the fix.
 static long           g_racy   = 0;
 static std::atomic<long> g_safe(0);
 
 static void racy_add(long n) {
-    for (long i = 0; i < n; ++i) ++g_racy;
+    for (long i = 0; i < n; ++i) ++g_racy;   // INTENTIONAL data race (UB)
 }
 static void atomic_add(long n) {
     for (long i = 0; i < n; ++i) g_safe.fetch_add(1, std::memory_order_relaxed);
@@ -112,7 +123,10 @@ static void section2_counter_comparison() {
     std::cout << "  atomic<long> expected=" << NT * PER
               << "  got=" << g_safe.load() << "\n";
     assert(g_safe.load() == NT * PER);
-    std::cout << "  Assertion passed: atomic guarantees correct count.\n";
+    // (assert() is a no-op under -DNDEBUG, so report the check explicitly)
+    std::cout << (g_safe.load() == NT * PER
+                    ? "  Check passed: atomic guarantees correct count.\n"
+                    : "  UNEXPECTED: atomic count mismatch!\n");
 }
 
 // =============================================================================
@@ -189,7 +203,9 @@ static void section4_memory_order() {
     std::cout << "  acq_rel    — acquire + release in one operation (RMW ops).\n";
     std::cout << "  seq_cst    — strongest: total sequential consistency across all\n";
     std::cout << "               threads.  Default for most atomic operations.\n";
-    std::cout << "               Slowest; adds full memory barrier.\n";
+    std::cout << "               Often the slowest; may need extra fences (e.g. a\n"
+              << "               full barrier for seq_cst stores on x86; on x86 seq_cst\n"
+              << "               loads are plain loads).\n";
     std::cout << "  consume    — data-dependency ordering (rarely used; avoid).\n";
 
     std::cout << "\n  Typical patterns:\n";
@@ -275,8 +291,14 @@ static void section5_spinlock() {
 // A Treiber stack is a lock-free LIFO data structure using a single atomic
 // pointer (top of stack).  push/pop both use a CAS loop.
 //
-// NOTE: This implementation has the ABA (A-B-A state: a value changes A→B→A between reads) problem — not safe for general use
-// without hazard pointers or tagged pointers.  Shown here as a teaching example.
+// NOTE: pop() is NOT safe with CONCURRENT poppers (this demo pops from one
+// thread only).  Two problems:
+//   1. Memory reclamation / use-after-free: pop() reads old_top->next, but
+//      another thread may already have popped and DELETED old_top.
+//   2. ABA (A-B-A: a value changes A→B→A between reads): if old_top is freed
+//      and a new node reuses its address, the CAS can wrongly succeed.
+// Real implementations use hazard pointers, epoch-based reclamation, or
+// tagged pointers.  Shown here as a teaching example only.
 
 template<typename T>
 class TreiberStack {
@@ -346,12 +368,15 @@ static void section6_treiber_stack() {
 
     std::cout << "\n--- Notes & Pitfalls ---\n";
     std::cout << "  1. memory_order_relaxed is safe ONLY when ordering doesn't matter\n";
-    std::cout << "     (e.g., an independent counter).  Wrong order = data races.\n";
+    std::cout << "     (e.g., an independent counter).  Operations on the atomic\n"
+              << "     itself never race, but too-weak ordering can let OTHER\n"
+              << "     (non-atomic) data be read unsynchronised = data race.\n";
     std::cout << "  2. compare_exchange_weak may fail spuriously — always in a loop.\n";
     std::cout << "     compare_exchange_strong never fails spuriously but may be\n";
     std::cout << "     slower on platforms with LL/SC (ARM, RISC-V).\n";
-    std::cout << "  3. Treiber stack has ABA problem: popping the same node twice\n";
-    std::cout << "     if it is recycled.  Use epoch-based reclamation in production.\n";
+    std::cout << "  3. This Treiber stack's pop() is unsafe with concurrent poppers:\n";
+    std::cout << "     use-after-free (reading next of a node another thread freed)\n";
+    std::cout << "     and ABA.  Use hazard pointers / epoch-based reclamation.\n";
     std::cout << "  4. atomic<double> is standard but often not hardware lock-free.\n";
     std::cout << "     Check is_lock_free() before using in hot paths.\n";
     std::cout << "  5. Spinlocks consume CPU and cause priority inversion under\n";

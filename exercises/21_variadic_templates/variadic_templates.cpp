@@ -15,6 +15,8 @@
 #include <utility>
 #include <typeinfo>
 #include <functional>
+#include <array>
+#include <cstddef>   // std::size_t
 
 // =============================================================================
 // SECTION 1: Parameter Packs and sizeof...
@@ -72,7 +74,8 @@ auto fold_product(Args... args) {
 
 template <typename... Args>
 bool fold_all_positive(Args... args) {
-    return ((args > 0) && ...);  // binary fold: short-circuits on false
+    return ((args > 0) && ...);  // unary right fold over &&: short-circuits on
+                                 // false (an empty pack yields true)
 }
 
 template <typename... Args>

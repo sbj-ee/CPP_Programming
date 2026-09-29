@@ -19,6 +19,8 @@
 #include <cerrno>
 #include <vector>
 #include <algorithm>
+#include <cstdio>       // std::snprintf
+#include <cstdint>      // uint32_t
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -125,7 +127,8 @@ static void section1_concepts() {
     std::cout << "              Still O(n) scan; better than select for fd count.\n";
     std::cout << "  epoll()   — Linux only; event-driven; O(1) per ready fd.\n";
     std::cout << "              Scales to hundreds of thousands of fds.\n";
-    std::cout << "              Modes: EPOLLET (edge-triggered), EPOLLIN, EPOLLOUT.\n";
+    std::cout << "              Events: EPOLLIN, EPOLLOUT, ...; mode flag: EPOLLET\n"
+              << "              (edge-triggered; level-triggered is the default).\n";
 
     std::cout << "\n  Level-triggered (default): fd stays reported until fully drained.\n";
     std::cout << "  Edge-triggered (EPOLLET):  reported only once per state change.\n";
@@ -152,7 +155,8 @@ static void section2_select() {
     FD_SET(p1.rfd(), &rfds);
     FD_SET(p2.rfd(), &rfds);
 
-    // Non-blocking timeout
+    // Bounded wait: block for at most 0.5 s (a zeroed timeval would poll
+    // without blocking; a null pointer would block indefinitely)
     timeval tv = {0, 500'000};  // 0.5 s
 
     int n = ::select(maxfd, &rfds, nullptr, nullptr, &tv);
@@ -323,6 +327,9 @@ static void section6_echo_server() {
     // Spawn NUM_CLIENTS child processes (clients)
     std::vector<pid_t> pids;
     for (int ci = 0; ci < NUM_CLIENTS; ++ci) {
+        // Flush BEFORE fork(): otherwise text still in std::cout's buffer is
+        // copied into the child and printed twice when output is redirected.
+        std::cout.flush();
         pid_t p = ::fork();
         if (p == 0) {
             ::close(listenfd);

@@ -77,8 +77,8 @@ while (!x.compare_exchange_weak(expected, expected * 2)) {
 x.compare_exchange_strong(expected, desired,
     std::memory_order_acq_rel,   // success order
     std::memory_order_acquire);  // failure order
-// Failure order must not be stronger than success order
-// Failure order cannot be release or acq_rel
+// Failure order cannot be release or acq_rel (the failure path is only a load).
+// (C++11/14 also required failure <= success; C++17 dropped that rule, P0418R2.)
 ```
 
 ### CAS Loop Pattern
@@ -217,7 +217,9 @@ public:
             if (top_.compare_exchange_weak(
                     old, old->next,
                     std::memory_order_acquire,
-                    std::memory_order_relaxed)) {
+                    std::memory_order_acquire)) {  // failure reloads `old`, whose
+                                                   // ->next is read next iteration:
+                                                   // needs acquire, not relaxed
                 out = std::move(old->val);
                 delete old;
                 return true;
@@ -226,7 +228,10 @@ public:
         return false;  // empty
     }
 
-    // WARNING: suffers from the ABA (A-B-A) problem — see pitfalls
+    // WARNING: pop() is unsafe with CONCURRENT poppers: it reads old->next
+    // after another thread may already have deleted `old` (use-after-free —
+    // a memory-reclamation problem), and it suffers from the ABA (A-B-A)
+    // problem — see pitfalls.
 };
 ```
 
@@ -253,7 +258,8 @@ public:
 // 1. ABA problem in CAS-based algorithms
 // Thread 1: read top = A; Thread 2: pop A, push B, push A; Thread 1: CAS succeeds
 // Top looks like A but the stack structure changed underneath.
-// Fix: versioned pointer (tagged pointer) or hazard pointers.
+// Fix: versioned pointer (tagged pointer) for ABA; hazard pointers or
+// epoch-based reclamation for ABA AND the use-after-free of old->next.
 
 // 2. volatile is NOT sufficient for thread synchronisation
 volatile int flag = 0;   // WRONG: no memory barrier
@@ -282,7 +288,10 @@ if (a == 0) a = 1;   // NOT atomic — check and set are separate ops
 // 6. Memory order failure constraint
 x.compare_exchange_strong(exp, desired,
     std::memory_order_acquire,   // success
-    std::memory_order_seq_cst);  // INVALID: failure stronger than success
+    std::memory_order_release);  // INVALID: failure order may not be release
+                                 // or acq_rel (UB).  Note: success=acquire with
+                                 // failure=seq_cst, which older texts call
+                                 // invalid, IS allowed since C++17 (P0418R2)
 
 // 7. Infinite spinlock under high contention
 // Spinlocks starve threads; prefer mutex for long critical sections

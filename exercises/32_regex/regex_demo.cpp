@@ -1,7 +1,8 @@
 // =============================================================================
 // Exercise 32: C++ Regular Expressions (<regex>)
 // =============================================================================
-// Topics: std::regex / std::smatch / std::cmatch, ERE (Extended Regular Expression) by default,
+// Topics: std::regex / std::smatch / std::cmatch, ECMAScript grammar by default
+//         (POSIX ERE, Extended Regular Expression, via std::regex::extended),
 //         regex_search, capture groups, regex_replace, flags (icase, multiline),
 //         sregex_iterator scan loop, common patterns (IPv4, ISO date, C ident)
 //
@@ -173,7 +174,9 @@ static void section4_replace() {
 // Flags are passed as the second argument to the std::regex constructor.
 // Common flags:
 //   std::regex::icase      — case-insensitive matching
-//   std::regex::multiline  — ^ and $ match start/end of each line (not just string)
+//   std::regex::multiline  — ^ and $ match start/end of each line (not just
+//                            string).  Added in C++17 (LWG 2503) and only
+//                            meaningful with the ECMAScript grammar.
 //   std::regex::ECMAScript — (default) ECMAScript syntax
 //   std::regex::extended   — POSIX ERE syntax
 

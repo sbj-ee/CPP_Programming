@@ -12,6 +12,8 @@
 #include <string>
 #include <vector>
 #include <functional>
+#include <utility>   // std::move
+#include <cstdio>    // FILE, std::tmpfile, std::fclose
 
 // =============================================================================
 // SECTION 1: std::unique_ptr<T> — Sole Ownership
@@ -62,13 +64,17 @@ void demo_unique_ptr() {
     // w3 goes out of scope here -> Gamma destroyed
 
     // Custom deleter (e.g., for a C resource)
-    auto file_deleter = [](FILE* f) {
-        if (f) { std::cout << "  custom deleter: closing file\n"; fclose(f); }
+    // (unique_ptr never calls its deleter for a null pointer, so no null
+    //  check is needed here — unlike shared_ptr, see topics/memory.)
+    auto file_deleter = [](std::FILE* f) {
+        std::cout << "  custom deleter: closing file\n";
+        std::fclose(f);
     };
-    // Open /dev/null as a harmless demonstration target
+    // std::tmpfile() is a portable, harmless demonstration target (the file
+    // is removed automatically when closed)
     {
-        std::unique_ptr<FILE, decltype(file_deleter)>
-            fp(fopen("/dev/null", "r"), file_deleter);
+        std::unique_ptr<std::FILE, decltype(file_deleter)>
+            fp(std::tmpfile(), file_deleter);
         std::cout << "  file open: " << (fp ? "yes" : "no") << "\n";
     }  // custom deleter called here
 }
@@ -235,7 +241,7 @@ void demo_enable_shared_from_this() {
 // Pass by value (shared_ptr):  SHARE ownership (increments count).
 // Pass by const ref (shared_ptr):  OBSERVE without incrementing count.
 //
-// Scott Meyers' rule of thumb:
+// Rule of thumb (Herb Sutter, GotW #91; C++ Core Guidelines F.7 / R.30):
 //   "If the function doesn't manipulate lifetime, pass a raw pointer or ref."
 
 void take_ownership(std::unique_ptr<Widget> w) {

@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <filesystem>
 #include <cmath>
+#include <cctype>   // std::toupper
 
 // =============================================================================
 // SECTION 1: Namespace Declaration and Nesting
@@ -168,9 +169,12 @@ void demo_aliases() {
 // the current scope but ALSO in the namespaces of the function's argument types.
 // This is ADL (Argument-Dependent Lookup), also called Koenig lookup.
 //
-// This is how 'std::cout << x' works: operator<< lives in namespace std, but
-// you don't need 'std::operator<<(std::cout, x)' — ADL finds it because
-// std::cout is of type std::ostream which lives in std.
+// This is how 'std::cout << some_string' works: that operator<< is a
+// NON-MEMBER function in namespace std, and you don't need to write
+// 'std::operator<<(std::cout, s)' — ADL finds it because the arguments'
+// types (std::ostream, std::string) live in std.  (For built-in types such
+// as int, operator<< is a MEMBER of std::ostream, found by ordinary member
+// lookup rather than ADL.)
 
 namespace shapes {
     struct Circle {
@@ -197,15 +201,16 @@ void demo_adl() {
     // Unqualified call — ADL finds shapes::operator<< because c is in shapes
     std::cout << "  ADL finds operator<<: " << c << "\n";
 
-    // Unqualified call — ADL finds shapes::area because c is in shapes
-    // (if we brought it into scope we could call area(c) without qualification)
-    std::cout << "  area: " << shapes::area(c) << "\n";
+    // Unqualified call — ADL finds shapes::area because c's type is in
+    // shapes, even though no 'using' brings 'area' into this scope.
+    std::cout << "  area: " << area(c) << "\n";
 
     // Explicit qualification always works too
     std::cout << "  shapes::describe: ";
     shapes::describe(c);
 
-    std::cout << "  (ADL is why 'std::cout << x' works without qualification)\n";
+    std::cout << "  (ADL is why 'std::cout << s' works for non-member operator<<\n"
+              << "   overloads, e.g. std::string's, without qualification)\n";
 }
 
 // =============================================================================
@@ -315,10 +320,11 @@ void demo_extern_c() {
 //   are strictly standard-conforming.
 //
 // Best practices:
-//   1. Put only declarations in headers (.h/.hpp): class definitions, function
-//      declarations, inline functions, templates, constexpr.
-//   2. Put definitions in source files (.cpp): non-inline function bodies,
-//      static member definitions.
+//   1. Headers (.h/.hpp) hold what every includer must see and what may
+//      legally appear in several translation units: declarations, class
+//      definitions, inline functions/variables, templates, constexpr.
+//   2. Source files (.cpp) hold everything that must be defined exactly
+//      once: non-inline function bodies, non-inline static data members.
 //   3. Use forward declarations to reduce #include chains in headers.
 //   4. Never put 'using namespace X;' at file scope in a header — it pollutes
 //      every translation unit that includes it.

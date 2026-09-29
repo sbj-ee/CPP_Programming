@@ -34,15 +34,19 @@ if (!handle) {
 }
 
 // Look up a symbol
+dlerror();                     // clear any stale error first
 void* sym = dlsym(handle, "my_function");
-const char* err = dlerror();   // must call AFTER dlsym; not thread-safe
+const char* err = dlerror();   // then check AFTER dlsym.  POSIX.1-2008 does not
+                               // require dlerror to be thread-safe; glibc keeps
+                               // the error state per thread.
 if (err) {
     throw std::runtime_error(std::string("dlsym: ") + err);
 }
 
 // Cast to the correct function pointer type
 using FuncType = int(*)(int, double);
-FuncType fn = reinterpret_cast<FuncType>(sym);  // technically UB in ISO C++; see Pitfalls section for the memcpy workaround
+FuncType fn = reinterpret_cast<FuncType>(sym);  // conditionally-supported (implementation-
+                                                // defined) in C++11+; POSIX requires it to work
 int result = fn(42, 3.14);
 
 // Close library (decrements reference count; freed when count reaches 0)
@@ -87,7 +91,9 @@ extern "C" {          // C linkage — prevents C++ name mangling
 // Compile: g++ -shared -fPIC -o libfoo.so foo.cpp
 
 // Without extern "C", the mangled name is compiler-specific:
-// "my_function" might be "_ZN3Foo10my_functionEi" — can't look up by simple name
+// with the Itanium C++ ABI (GCC/Clang on Linux/macOS) int my_function(int)
+// becomes "_Z11my_functioni" (Foo::my_function(int) would be
+// "_ZN3Foo11my_functionEi") — can't look up by simple name
 
 // Attribute visibility (GCC/Clang):
 __attribute__((visibility("default"))) int public_fn();   // exported
@@ -155,9 +161,10 @@ public:
     }
 
     // Typed function pointer lookup
-    // Note: casting void* to a function pointer via reinterpret_cast is technically
-    // UB (Undefined Behaviour) in ISO C++, but is POSIX-blessed and works on all
-    // mainstream platforms. Strict-conformance alternative: memcpy(&fp, &sym, sizeof fp).
+    // Note: casting void* to a function pointer via reinterpret_cast is
+    // conditionally-supported (implementation-defined) in ISO C++11 and later —
+    // not UB — and POSIX requires it to work.  memcpy(&fp, &sym, sizeof fp) is
+    // an equivalent idiom, not a more conforming one.
     template<typename Signature>
     std::function<Signature> func(const std::string& name) const {
         using FP = Signature*;
@@ -247,7 +254,7 @@ extern "C" {
 
 ```cpp
 // 1. Forgetting extern "C" → symbol not found
-// C++ name mangling makes "void foo(int)" into "_ZN3foo1Ei" or similar
+// C++ name mangling makes "void foo(int)" into "_Z3fooi" (Itanium ABI)
 // dlsym("foo") fails; must use extern "C" or nm/objdump to find mangled name
 
 // 2. dlerror() must be called ONCE immediately after dlsym

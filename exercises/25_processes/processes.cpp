@@ -19,7 +19,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>   // waitpid, WIFEXITED, WEXITSTATUS, WIFSIGNALED
 #include <fcntl.h>      // fcntl, F_SETFD, FD_CLOEXEC
-#include <cstdio>       // FILE*, popen, pclose
+#include <cstdio>       // FILE*; popen/pclose are POSIX additions to <stdio.h>
+#include <csignal>      // kill, SIGKILL
 
 // =============================================================================
 // RAII Pipe Wrapper
@@ -82,11 +83,24 @@ private:
 //   == 0  in child
 //   > 0   in parent (return value is child PID)
 //   == -1 fork failed
+//
+// Buffered output is duplicated too: anything still sitting in std::cout's
+// (or stdio's) buffer at fork() time exists in BOTH processes, and is printed
+// twice as soon as the child flushes.  With a terminal this rarely shows
+// (line-buffered), but with `./processes > out.txt` or `| less` the buffer is
+// large and whole sections repeat.  So flush everything before every fork().
+
+static pid_t fork_flushed() {
+    std::cout.flush();
+    std::cerr.flush();
+    std::fflush(nullptr);   // all C stdio output streams
+    return ::fork();
+}
 
 static void section1_fork() {
     std::cout << "\n=== Section 1: fork() and process identity ===\n";
 
-    pid_t pid = ::fork();
+    pid_t pid = fork_flushed();
     if (pid == -1) {
         std::cerr << "fork failed: " << std::strerror(errno) << "\n";
         return;
@@ -129,11 +143,18 @@ static void decode_status(int status) {
     }
 }
 
+// Short form used below: WEXITSTATUS is only meaningful if WIFEXITED is true.
+static std::string exit_code_str(int status) {
+    if (WIFEXITED(status))   return std::to_string(WEXITSTATUS(status));
+    if (WIFSIGNALED(status)) return "killed by signal " + std::to_string(WTERMSIG(status));
+    return "unknown status";
+}
+
 static void section2_waitpid() {
     std::cout << "\n=== Section 2: waitpid() and exit status decoding ===\n";
 
     // Child exits with code 42
-    pid_t p1 = ::fork();
+    pid_t p1 = fork_flushed();
     if (p1 == 0) { ::_exit(42); }
     int st1;
     ::waitpid(p1, &st1, 0);
@@ -141,7 +162,7 @@ static void section2_waitpid() {
     decode_status(st1);
 
     // Child exits with code 0
-    pid_t p2 = ::fork();
+    pid_t p2 = fork_flushed();
     if (p2 == 0) { ::_exit(0); }
     int st2;
     ::waitpid(p2, &st2, 0);
@@ -149,7 +170,7 @@ static void section2_waitpid() {
     decode_status(st2);
 
     // Child killed by SIGKILL
-    pid_t p3 = ::fork();
+    pid_t p3 = fork_flushed();
     if (p3 == 0) { ::kill(::getpid(), SIGKILL); ::_exit(0); }
     int st3;
     ::waitpid(p3, &st3, 0);
@@ -170,7 +191,8 @@ static void section3_execvp() {
     std::cout << "\n=== Section 3: execvp() — echo and bad program ===\n";
 
     // -- echo --
-    pid_t p1 = ::fork();
+    pid_t p1 = fork_flushed();
+    if (p1 < 0) { std::cerr << "fork failed: " << std::strerror(errno) << "\n"; return; }
     if (p1 == 0) {
         // Child
         const char* args[] = { "echo", "  [execvp] Hello from echo!", nullptr };
@@ -181,10 +203,11 @@ static void section3_execvp() {
     }
     int st1;
     ::waitpid(p1, &st1, 0);
-    std::cout << "  echo exit code: " << WEXITSTATUS(st1) << "\n";
+    std::cout << "  echo exit code: " << exit_code_str(st1) << "\n";
 
     // -- bad program → exit 127 --
-    pid_t p2 = ::fork();
+    pid_t p2 = fork_flushed();
+    if (p2 < 0) { std::cerr << "fork failed: " << std::strerror(errno) << "\n"; return; }
     if (p2 == 0) {
         const char* args[] = { "this_program_does_not_exist", nullptr };
         ::execvp("this_program_does_not_exist", const_cast<char* const*>(args));
@@ -192,7 +215,7 @@ static void section3_execvp() {
     }
     int st2;
     ::waitpid(p2, &st2, 0);
-    std::cout << "  bad-program exit code: " << WEXITSTATUS(st2)
+    std::cout << "  bad-program exit code: " << exit_code_str(st2)
               << "  (127 = command not found)\n";
 }
 
@@ -215,7 +238,7 @@ static void section4_pipes() {
         PipePair pipe;
         if (!pipe.ok()) return;
 
-        pid_t pid = ::fork();
+        pid_t pid = fork_flushed();
         if (pid == 0) {
             pipe.close_write();  // child doesn't write
             char buf[128] = {};
@@ -230,7 +253,7 @@ static void section4_pipes() {
         ::write(pipe.write_fd(), msg.c_str(), msg.size());
         pipe.close_write();  // signals EOF to child
         int st; ::waitpid(pid, &st, 0);
-        std::cout << "  [parent unidirectional] child exit=" << WEXITSTATUS(st) << "\n";
+        std::cout << "  [parent unidirectional] child exit=" << exit_code_str(st) << "\n";
     }
 
     // --- Bidirectional: two pipes ---
@@ -239,7 +262,7 @@ static void section4_pipes() {
         PipePair c2p;  // child-to-parent
         if (!p2c.ok() || !c2p.ok()) return;
 
-        pid_t pid = ::fork();
+        pid_t pid = fork_flushed();
         if (pid == 0) {
             p2c.close_write();
             c2p.close_read();
@@ -276,7 +299,8 @@ static void section4_pipes() {
 // popen() creates a child process (via /bin/sh -c) and returns a FILE* stream
 // connected to its stdout (mode "r") or stdin (mode "w").
 // pclose() waits for the child and returns its exit status.
-// Fine to use FILE* directly in C++ — stdio is part of the C++ standard library.
+// Note: FILE* and <cstdio> are standard C++, but popen()/pclose() are POSIX
+// (not ISO C/C++); on Windows the equivalents are _popen()/_pclose().
 
 static void section5_popen() {
     std::cout << "\n=== Section 5: popen() / pclose() ===\n";
@@ -347,6 +371,10 @@ static void section6_pitfalls() {
     std::cout << "    exit() flushes stdio buffers and runs atexit handlers —\n";
     std::cout << "    both of which may execute code the child should not run.\n";
     std::cout << "    _exit() terminates immediately without flushing.\n";
+    std::cout << "    Also flush std::cout / stdio BEFORE fork(): otherwise the\n";
+    std::cout << "    unflushed buffer is copied into the child and any flush in\n";
+    std::cout << "    the child prints it a second time (visible when stdout is\n";
+    std::cout << "    redirected to a file or pipe).\n";
 }
 
 // =============================================================================

@@ -27,8 +27,8 @@
 ```cpp
 // Default modes:
 std::ifstream  → ios::in
-std::ofstream  → ios::out | ios::trunc
-std::fstream   → (no default — must specify)
+std::ofstream  → ios::out            (truncates, same effect as out | trunc)
+std::fstream   → ios::in | ios::out  (file must already exist; does not truncate)
 
 // Combinations:
 std::ofstream f("log.txt", std::ios::out | std::ios::app);
@@ -169,12 +169,13 @@ fin.seekg(0, std::ios::beg);
 // State bits:
 in.good()    // no errors, not EOF
 in.eof()     // EOF reached
-in.fail()    // logical error (bad format, conversion failure)
+in.fail()    // failbit OR badbit set (bad format, conversion failure, I/O error)
 in.bad()     // I/O error (read/write failed)
 
-// Operator bool — true if good() (no fail or bad)
+// Operator bool — returns !fail() (NOT good(): a stream with only eofbit
+// set still converts to true)
 if (!in) { /* error */ }
-while (in >> val) { }    // loop ends on fail or eof
+while (in >> val) { }    // loop ends when an extraction fails (incl. at EOF)
 
 // Clear errors (necessary to continue after error)
 in.clear();
@@ -262,8 +263,10 @@ std::getline(in, line);   // silently reads nothing; line is empty
 std::ofstream out("data.bin");   // text mode!
 // On Windows: '\n' → "\r\n"; raw bytes mangled
 
-// 3. Forgetting to clear() after EOF before seeking
-in.seekg(0);   // seek does nothing while eofbit set
+// 3. Forgetting to clear() after a failed read before seeking
+in.seekg(0);   // since C++11 seekg clears eofbit itself, but it does nothing
+               // if failbit is set — and hitting EOF during >> or getline
+               // usually sets failbit too
 // Fix:
 in.clear();
 in.seekg(0);

@@ -25,8 +25,9 @@
 //
 // Virtual destructor rule: if a class is meant to be used polymorphically
 // (i.e., deleted through a base-class pointer), the destructor MUST be virtual.
-// Without it, deleting through Shape* calls only Shape::~Shape(), leaking
-// any resources owned by the derived object.
+// Without it, deleting a derived object through Shape* is undefined behaviour
+// ([expr.delete]).  A common (but NOT guaranteed) outcome is that only
+// Shape::~Shape() runs, leaking any resources owned by the derived object.
 
 static constexpr double PI = 3.14159265358979323846;
 
@@ -178,7 +179,9 @@ void demo_polymorphism() {
 // Pointer form: returns nullptr on failure (safe to check).
 // Reference form: throws std::bad_cast on failure.
 //
-// typeid(expr) returns a std::type_info object; .name() gives a mangled name.
+// typeid(expr) returns a std::type_info object; .name() gives an
+// implementation-defined string (GCC/Clang: a mangled name such as "6Circle";
+// MSVC: a readable name such as "class Circle").
 // Use typeid only when you genuinely need to know the concrete type; prefer
 // virtual dispatch for type-dependent behaviour.
 
@@ -199,11 +202,15 @@ void demo_dynamic_cast() {
         std::cout << "s1 is NOT a Rectangle (dynamic_cast returned nullptr)\n";
     }
 
-    // typeid — reports runtime type
-    std::cout << "typeid of s1: " << typeid(*s1).name() << "\n";
-    std::cout << "typeid of s2: " << typeid(*s2).name() << "\n";
+    // typeid — reports runtime type.  Bind references first: typeid(*ptr)
+    // evaluates its operand at runtime for polymorphic types, and Clang warns
+    // (-Wpotentially-evaluated-expression) about the side effect of *ptr.
+    const Shape& r1 = *s1;
+    const Shape& r2 = *s2;
+    std::cout << "typeid of s1: " << typeid(r1).name() << "\n";
+    std::cout << "typeid of s2: " << typeid(r2).name() << "\n";
     std::cout << "Are they the same type? "
-              << (typeid(*s1) == typeid(*s2) ? "yes" : "no") << "\n";
+              << (typeid(r1) == typeid(r2) ? "yes" : "no") << "\n";
 
     // Reference dynamic_cast with exception handling
     try {
@@ -219,7 +226,14 @@ void demo_dynamic_cast() {
 // =============================================================================
 //
 // Without a virtual destructor, deleting a derived object through a base pointer
-// has undefined behaviour: only the base destructor runs.
+// has UNDEFINED BEHAVIOUR ([expr.delete]/3).  The standard says nothing about
+// what happens: typically only the base destructor runs, but the program may
+// also corrupt the heap (e.g. with multiple inheritance, where the base
+// subobject address differs from the allocation address) or do anything else.
+//
+// Because it is UB, this program does NOT execute such a delete — it only
+// shows the code.  The BadBase/BadDerived pair below is destroyed safely via
+// the most-derived type to show which destructors SHOULD run.
 
 class BadBase {
 public:
@@ -231,7 +245,7 @@ public:
 class BadDerived : public BadBase {
 public:
     ~BadDerived() {
-        std::cout << "  ~BadDerived() — this may NEVER be called!\n";
+        std::cout << "  ~BadDerived()\n";
     }
 };
 
@@ -244,12 +258,17 @@ void demo_virtual_destructor() {
         delete s;  // calls ~Circle() then ~Shape() — correct
     }
 
-    std::cout << "\nDangerous deletion (BadBase has non-virtual destructor):\n";
+    std::cout << "\nDangerous deletion (BadBase has non-virtual destructor):\n"
+              << "    BadBase* b = new BadDerived();\n"
+              << "    delete b;   // UNDEFINED BEHAVIOUR — not executed here.\n"
+              << "  Typically only ~BadBase() would run and ~BadDerived() would\n"
+              << "  be skipped, but the standard guarantees nothing.\n";
+
+    std::cout << "\nSafe: deleting through the most-derived type runs both:\n";
     {
-        BadBase* b = new BadDerived();
-        delete b;  // UB: only ~BadBase() called; ~BadDerived() skipped!
+        BadDerived* d = new BadDerived();
+        delete d;  // well-defined: ~BadDerived() then ~BadBase()
     }
-    std::cout << "  (Notice ~BadDerived() was never printed above)\n";
 }
 
 // =============================================================================

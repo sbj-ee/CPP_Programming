@@ -24,7 +24,7 @@ the what.
 
 ```bash
 # Compiler
-g++ --version   # GCC 9+ required; GCC 12+ recommended for C++20 features
+g++ --version   # GCC 10+ required (exercise 30 uses -std=c++20); GCC 12+ recommended
 clang++ --version   # Clang 11+ also works
 
 # Build tools
@@ -149,7 +149,8 @@ changes in the C++ version:
 
 ## Every File Has
 
-- A single `.cpp` source file with at least six named sections
-- A local `Makefile` that builds it with the correct flags
-- Zero compiler warnings under `-Wall -Wextra -Wpedantic`
+- A `.cpp` source file with at least six named sections (exercise 31 also has a
+  separate `plugin.cpp`/`plugin.hpp` for the shared library it loads)
+- A local `Makefile` that builds it with the correct flags (`all`, `clean`, `valgrind`)
+- Zero compiler warnings under `-Wall -Wextra -Wpedantic` with GCC and Clang
 - No `using namespace std;` at file scope

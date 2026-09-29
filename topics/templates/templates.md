@@ -55,9 +55,10 @@ private:
     T data_[N];
 };
 
-Array<int, 10> arr;   // 10-element array on stack; N is compile-time constant
+Array<int, 10> arr;   // 10 ints stored inline (on the stack if local); N is a compile-time constant
 
-// C++20: floating-point and class NTTPs allowed
+// C++20: floating-point and class-type NTTPs allowed (compiler support arrived
+// later than most C++20 features — check your compiler version)
 template<double Scale>
 double scaled(double x) { return x * Scale; }
 ```
@@ -81,7 +82,9 @@ template<typename T>
 bool equal(T a, T b) { return a == b; }
 
 template<>
-bool equal<double>(double a, double b) {
+inline bool equal<double>(double a, double b) {  // a full specialisation is an
+                                                 // ordinary function: needs
+                                                 // 'inline' if defined in a header
     return std::abs(a - b) < 1e-9;
 }
 ```
@@ -142,12 +145,16 @@ g(5);       // T = int;   x is int&&
 // CTAD (Class Template Argument Deduction, C++17) — compiler deduces template args
 std::pair p(1, 3.14);        // pair<int,double> — deduced
 std::vector v = {1,2,3};     // vector<int>
-Stack s{42};                 // deduced via user-provided deduction guide
 std::tuple t(1, 'a', 2.0);  // tuple<int,char,double>
 
-// Custom deduction guide
-template<typename T>
-Stack(std::initializer_list<T>) -> Stack<T>;
+// Custom deduction guide — needed when no constructor lets the compiler deduce
+// T.  Suppose Stack (above) also had an iterator-pair constructor:
+//     template<class It> Stack(It first, It last) : data_(first, last) {}
+// T cannot be deduced from It, so add a guide (at namespace scope):
+template<class It>
+Stack(It, It) -> Stack<typename std::iterator_traits<It>::value_type>;
+
+Stack s(v.begin(), v.end()); // Stack<int>, via the guide
 ```
 
 ---
@@ -294,7 +301,10 @@ auto max_val(auto a, auto b) { return a > b ? a : b; }
 // Linker can't find definition if template is defined in .cpp and used elsewhere.
 // All template definitions must be visible at instantiation point.
 // Exception: explicit instantiation in .cpp:
-template class Stack<int>;   // instantiates in this TU (Translation Unit) only
+template class Stack<int>;   // explicit instantiation DEFINITION: emits all of
+                             // Stack<int>'s members in this TU (Translation Unit)
+                             // so other TUs can link against them (declare it
+                             // there with: extern template class Stack<int>;)
 
 // 2. Code bloat
 // Each instantiation generates separate code.
@@ -324,5 +334,7 @@ void f(T obj) {
 
 // 6. CTAD pitfalls
 std::vector v{1, 2, 3};   // vector<int> — OK
-std::vector v2{std::vector<int>{1,2,3}};  // vector<vector<int>>! not vector<int>
+std::vector v2{std::vector<int>{1,2,3}};  // vector<int>! the copy-deduction
+                                          // candidate wins: this COPIES the argument
+std::vector v3{std::vector<int>{1,2,3}, std::vector<int>{4}};  // vector<vector<int>>
 ```

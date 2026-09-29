@@ -15,8 +15,10 @@
 #include <system_error>
 #include <chrono>
 #include <iomanip>
-#include <cstdio>       // std::tmpnam (controlled use — see section 5)
 #include <map>
+#include <ctime>        // std::time_t, std::strftime, std::localtime
+#include <cstdint>      // std::uintmax_t
+#include <iterator>     // std::distance
 
 #include <filesystem>
 
@@ -27,8 +29,11 @@ namespace fs = std::filesystem;
 // =============================================================================
 //
 // std::filesystem::path is a portable representation of a file system path.
-// It normalises separators ('/' on POSIX, '\\' on Windows) and provides
-// components (root, parent, filename, stem, extension).
+// It stores the string as given (it does NOT rewrite separators — use
+// make_preferred() to convert to the native separator, '\\' on Windows, or
+// generic_string() to get '/' separators) and provides components (root,
+// parent, filename, stem, extension).  On Windows both '/' and '\\' are
+// recognised as separators when decomposing a path.
 //
 // Constructing a path from a string is cheap; no OS calls are made.
 
@@ -49,7 +54,7 @@ static void section1_concepts() {
     for (const auto& part : p)
         std::cout << "    " << part << "\n";
 
-    // portable_string returns forward-slashes on all platforms
+    // generic_string() returns '/' separators on all platforms
     std::cout << "\n  Portable string: " << p.generic_string() << "\n";
 
     // Path concatenation with /=
@@ -258,7 +263,9 @@ static void section5_create_remove_copy() {
     std::cout << "  remove(src):  src exists=" << fs::exists(src) << "\n";
 
     // Temp file alternative: use mkstemp (Portable Operating System Interface
-    // / POSIX) or generate a unique path. std::tmpnam is deprecated.
+    // / POSIX), std::tmpfile(), or generate a unique path.  Avoid std::tmpnam:
+    // it is not deprecated in ISO C++, but it is unsafe (the name can be taken
+    // by another process between tmpnam() and opening it) and linkers warn.
     {
         std::string name = (tmp / "ex33_tmpfile.dat").string();
         std::ofstream ofs(name);
@@ -306,7 +313,8 @@ static void section6_error_handling() {
     if (ec) {
         std::cout << "  file_size failed: " << ec.message()
                   << " (value=" << ec.value() << ")\n";
-        std::cout << "  returned value: " << sz << " (use is_error to detect)\n";
+        std::cout << "  returned value: " << sz
+                  << " (static_cast<uintmax_t>(-1); check ec, not the value)\n";
     }
 
     // Checking multiple operations
@@ -317,6 +325,8 @@ static void section6_error_handling() {
     fs::create_directory(p, ec);
     std::cout << "    create_directory: " << (ec ? ec.message() : "ok") << "\n";
 
+    // /etc/hostname exists on most Linux systems; elsewhere this step just
+    // reports an error through ec (which is the point of this section).
     fs::copy_file("/etc/hostname", p / "hostname", ec);
     std::cout << "    copy_file:        " << (ec ? ec.message() : "ok") << "\n";
 
@@ -331,11 +341,15 @@ static void section6_error_handling() {
     std::cout << "     canonical() resolves symlinks and requires the path to exist.\n";
     std::cout << "  2. directory_iterator order is unspecified (filesystem order).\n";
     std::cout << "     Sort entries explicitly if order matters.\n";
-    std::cout << "  3. file_size is undefined for directories; use error_code overload.\n";
-    std::cout << "  4. recursive_directory_iterator skips permission-denied dirs by\n";
-    std::cout << "     default; pass directory_options::skip_permission_denied.\n";
-    std::cout << "  5. last_write_time uses file_clock (C++20 feature) — converting\n";
-    std::cout << "     to system_clock may require clock_cast or arithmetic workaround.\n";
+    std::cout << "  3. file_size on a directory is an ERROR (throws filesystem_error;\n";
+    std::cout << "     the error_code overload sets ec and returns uintmax_t(-1)).\n";
+    std::cout << "  4. recursive_directory_iterator reports an error (throws) on a\n";
+    std::cout << "     permission-denied directory by default; pass\n";
+    std::cout << "     directory_options::skip_permission_denied to skip them.\n";
+    std::cout << "  5. last_write_time returns file_time_type, whose clock is\n";
+    std::cout << "     implementation-defined in C++17 (C++20 names it\n";
+    std::cout << "     std::chrono::file_clock and adds clock_cast) — converting to\n";
+    std::cout << "     system_clock in C++17 needs an arithmetic workaround.\n";
     std::cout << "  6. On GCC < 9 you may need to link -lstdc++fs explicitly.\n";
 }
 

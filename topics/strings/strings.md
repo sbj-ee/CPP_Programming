@@ -224,7 +224,9 @@ void process(std::string_view sv);  // accepts string, string literal, char*
 ```cpp
 // Range-for
 for (char c : s) { }
-for (char& c : s) { c = toupper(c); }
+// <cctype>: cast to unsigned char first — passing a negative char (e.g. a
+// UTF-8 byte where char is signed) to toupper is undefined behaviour
+for (char& c : s) { c = static_cast<char>(std::toupper(static_cast<unsigned char>(c))); }
 
 // Index
 for (size_t i = 0; i < s.size(); ++i) { s[i]; }

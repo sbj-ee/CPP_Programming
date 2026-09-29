@@ -48,9 +48,24 @@ make clean
 
 ## Requirements
 
-- `g++` (GCC 9+) or `clang++` (11+)
+- `g++` (GCC 10+) or `clang++` (11+) — exercise 30 is built with `-std=c++20`,
+  which GCC 9 does not accept
 - `make`
 - C++17 support required; C++20 used for exercise 30 (semaphores)
+- `valgrind` (optional, Linux) for `make valgrind`
+
+### Platform notes
+
+Exercises 01–22 and 32–33 use only standard C++ (33 reads a couple of
+Linux-style paths such as `/etc/hostname` but handles their absence).
+Exercises 23–31 use POSIX APIs and are developed and tested on Linux:
+
+- 28 (`epoll`) and 30 (`sem_timedwait`, unnamed `sem_t`) are Linux-specific
+  and do not build on macOS as written.
+- 27 (`mmap`) defines `_DARWIN_C_SOURCE` on macOS so that `MAP_ANONYMOUS`
+  stays visible; the other POSIX exercises should work on macOS but are not
+  routinely tested there.
+- On Windows, use WSL for exercises 23–31.
 
 ## Exercises
 
@@ -87,14 +102,16 @@ make clean
 | 29 | std::atomic | `atomic<T>`, `fetch_add`, CAS (Compare-And-Swap), `memory_order`, `atomic_flag`, lock-free stack |
 | 30 | Semaphores | POSIX `sem_t` + C++20 `counting_semaphore`/`binary_semaphore` |
 | 31 | Dynamic Loading | `dlopen`/`dlsym`, RAII `DynLib`, plugin pattern, `RTLD_DEFAULT` |
-| 32 | std::regex | `regex_search/match/replace`, `smatch`, `sregex_iterator`, ERE (Extended Regular Expression) patterns |
+| 32 | std::regex | `regex_search/match/replace`, `smatch`, `sregex_iterator`, ECMAScript (default) and POSIX ERE (Extended Regular Expression) grammars |
 | 33 | std::filesystem | `path`, `directory_iterator`, `create_directories`, `remove_all`, `error_code` |
 
 ---
 
 ## Appendix A: Makefile
 
-The root `Makefile` builds every `.cpp` file found under `exercises/` and `topics/`.
+The root `Makefile` builds any standalone `.cpp` file found under `exercises/` and
+`topics/`, and delegates to per-directory Makefiles (currently every exercise has
+one). A simplified sketch:
 
 ```makefile
 CXX      = g++
@@ -115,14 +132,14 @@ all: $(BINS)
 valgrind: all
 	@for bin in $(BINS); do \
 		echo "--- $$bin ---"; \
-		$(VALGRIND) $$bin 2>&1 | grep -E "ERROR SUMMARY|no leaks"; \
+		$(VALGRIND) $$bin || exit 1; \
 	done
 
 clean:
 	@find exercises topics -type f ! -name '*.cpp' ! -name '*.hpp' ! -name '*.h' ! -name '*.md' ! -name 'Makefile' -delete
 ```
 
-> **Note:** This is a simplified illustration. The actual root `Makefile` also manages per-exercise sub-Makefiles via a `_MANAGED` variable and delegates `all`/`clean` to them.
+> **Note:** This is a simplified illustration. The actual root `Makefile` also manages per-exercise sub-Makefiles via a `_MANAGED` variable and delegates `all`/`clean`/`valgrind` to them, stopping at the first failing directory.
 
 ### Flags explained
 
@@ -130,7 +147,7 @@ clean:
 |------|---------|
 | `-Wall` | Common warnings |
 | `-Wextra` | Extra warnings beyond `-Wall` |
-| `-Wpedantic` | Strict ISO C++ compliance |
+| `-Wpedantic` | Warn about non-ISO C++ extensions (does not make the compiler fully strict) |
 | `-std=c++17` | C++17 (structured bindings, `string_view`, `filesystem`, `optional`, `variant`) |
 | `-g` | Debug symbols for `gdb` / valgrind |
 | `-pthread` | Thread support — per-exercise flag (exercises 24, 29, 30), not in root `CXXFLAGS` |
@@ -138,9 +155,10 @@ clean:
 
 ### Per-exercise Makefiles
 
-Exercises that need extra link flags (threads, dynamic loading, plugins) carry their
-own `Makefile` in the exercise directory. The root Makefile delegates to them via
-`$(MAKE) -C <dir> all`.
+Every exercise carries its own `Makefile` (with `all`, `clean` and `valgrind`
+targets); the ones that need extra flags (threads, C++20, dynamic loading, plugins)
+set them there. The root Makefile delegates to them via `$(MAKE) -C <dir> all`
+(and likewise for `clean` and `valgrind`).
 
 ---
 

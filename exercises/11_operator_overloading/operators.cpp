@@ -310,7 +310,7 @@ int main()
 
     std::cout << "\nNotes:\n";
     std::cout << "  - operator+ is non-member (friend) so it works for a+b and b+a.\n";
-    std::cout << "  - Compound assignment (+=) modifies *this and returns *this&.\n";
+    std::cout << "  - Compound assignment (+=) modifies *this and returns *this by reference (T&).\n";
     std::cout << "  - operator<< returns ostream& to allow chaining.\n";
     std::cout << "  - For ordering, provide operator< and derive others from it\n";
     std::cout << "    (or use C++20 spaceship operator <=>).\n";

@@ -52,7 +52,9 @@ void section_refs_vs_pointers()
 
     int a = 10;
 
-    // Reference: alias, must be initialized, cannot be reseated, never null
+    // Reference: alias, must be initialized, cannot be reseated, cannot be
+    // null in a valid program — but it CAN dangle if the referred-to object
+    // dies first (e.g. returning a reference to a local variable).
     int& ref = a;
     ref = 20;
     std::cout << "After ref=20: a=" << a << "\n";
@@ -65,7 +67,8 @@ void section_refs_vs_pointers()
     std::cout << "ptr -> b: *ptr=" << *ptr << "\n";
 
     std::cout << "\nComparison:\n";
-    std::cout << "  Reference: always valid, no null, no reseating, cleaner syntax\n";
+    std::cout << "  Reference: no null, no reseating, cleaner syntax\n"
+              << "             (but can still dangle if the object dies first)\n";
     std::cout << "  Pointer  : can be null, can be reseated, explicit dereference\n";
     std::cout << "  Prefer references when the target is always valid.\n";
     std::cout << "  Use pointers when null or reseating is needed.\n";

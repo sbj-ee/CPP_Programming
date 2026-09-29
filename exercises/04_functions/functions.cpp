@@ -51,6 +51,8 @@ double power(double base, int exponent = 2)
 void increment_by_value(int x)
 {
     x += 1;    // modifies local copy only
+    (void)x;   // the new value is deliberately unused (silences Clang's
+               // -Wunused-but-set-parameter)
 }
 
 // Pass by reference: function can modify caller's variable.
@@ -96,9 +98,12 @@ int& get_element(std::vector<int>& v, std::size_t idx)
 
 // ── Section 6: Inline functions ───────────────────────────────────────────────
 
-// inline hints to the compiler to expand the call in place (no function call
-// overhead). Modern compilers inline aggressively regardless of the keyword.
-// Typically defined in headers so the definition is visible at call sites.
+// 'inline' has two meanings.  The one the standard actually guarantees is about
+// linkage/ODR: an inline function may be DEFINED in several translation units
+// (e.g. in a header included everywhere) without a multiple-definition link
+// error, as long as every definition is identical.  The historical meaning —
+// "expand the call in place" — is only a hint; modern compilers decide
+// inlining themselves regardless of the keyword.
 inline int square(int x) { return x * x; }
 inline double clamp(double v, double lo, double hi)
 {

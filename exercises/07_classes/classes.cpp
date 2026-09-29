@@ -171,7 +171,10 @@ int main()
     p1.print(); std::cout << "  to  "; p2.print();
     std::cout << "  distance = " << p1.distance_to(p2) << "\n";
 
-    // Designated initializers (C++20 for structs, but aggregate init is C++11)
+    // Value-initialisation with empty braces (C++11 brace syntax): for an
+    // aggregate like Point every member is zero-initialised.
+    // (Aggregate initialisation itself dates from C++98, e.g. Point p = {1, 2};
+    //  designated initialisers such as Point{.x = 1, .y = 2} are C++20.)
     Point origin{};    // zero-initialized
     std::cout << "origin = "; origin.print(); std::cout << "\n";
 
@@ -234,11 +237,14 @@ int main()
     std::cout << "  Both support member functions, constructors, destructors.\n";
     std::cout << "  Constructors initialise members in the initialiser list (: m(v)).\n";
     std::cout << "  Destructor (~ClassName) is called when object goes out of scope.\n";
-    std::cout << "  const member functions cannot modify data members.\n";
+    std::cout << "  const member functions cannot modify data members\n"
+              << "  (except those declared 'mutable').\n";
     std::cout << "  this pointer is the address of the object; useful for chaining.\n";
 
     std::cout << "\nNotes:\n";
-    std::cout << "  - Initialiser list (: m(v)) is faster than assignment in body.\n";
+    std::cout << "  - Initialiser list (: m(v)) initialises members directly; assigning\n"
+              << "    in the body default-constructs first, then assigns (can be slower,\n"
+              << "    and impossible for const/reference members).\n";
     std::cout << "  - Use 'explicit' on single-arg ctors to prevent implicit conversion.\n";
     std::cout << "  - protected lets derived classes access members, not the public.\n";
     std::cout << "  - Return *this from modifiers to enable method chaining.\n";

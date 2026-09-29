@@ -196,8 +196,11 @@ void demo_catch_all_rethrow() {
 // SECTION 5: noexcept Specifier and std::terminate
 // =============================================================================
 //
-// noexcept(true): declares the function will not throw.  If it does, the
-// runtime calls std::terminate() immediately — no stack unwinding.
+// noexcept(true): declares the function will not throw.  If an exception
+// tries to escape it, std::terminate() is called.  Whether the stack is
+// unwound (destructors run) before terminate is IMPLEMENTATION-DEFINED
+// ([except.terminate]); GCC and Clang typically do not unwind, so do not rely
+// on destructors running.
 // noexcept is important for move operations (see exercise 20); the STL uses
 // it to decide whether to move or copy during reallocation.
 //
@@ -245,15 +248,19 @@ class BankAccount {
 public:
     explicit BankAccount(double balance) : balance_(balance) {}
 
-    // Basic guarantee: if withdraw throws, balance may have been modified —
-    // but the object is still valid and no resources are leaked.
+    // Nominally the "basic" example — but note that because every check that
+    // can throw happens BEFORE balance_ is modified, this function actually
+    // provides the STRONG guarantee.  A merely-basic function would, say,
+    // modify balance_ and then call something that may throw, leaving a valid
+    // but changed state.
     void withdraw_basic(double amount) {
         if (amount <= 0) throw std::invalid_argument("amount must be positive");
         if (amount > balance_) throw std::runtime_error("insufficient funds");
         balance_ -= amount;
     }
 
-    // Strong guarantee: copy-and-swap ensures all-or-nothing semantics.
+    // Strong guarantee: compute the new state on the side, then commit with
+    // non-throwing operations (the same idea as copy-and-swap).
     void transfer_strong(BankAccount& other, double amount) {
         // Work on copies first; only commit if no exception
         double new_this  = balance_  - amount;
@@ -277,7 +284,7 @@ void demo_exception_safety() {
 
     BankAccount acc(100.0);
 
-    // Basic guarantee demo
+    // withdraw_basic demo (validates before modifying, so state is unchanged)
     try {
         acc.withdraw_basic(-10);
     } catch (const std::invalid_argument& e) {
@@ -408,10 +415,12 @@ int main() {
               << "   catching std::exception first swallows everything.\n";
     std::cout << "3. Use 'throw;' (no argument) to re-throw — never 'throw e;'\n"
               << "   because that slices the exception.\n";
-    std::cout << "4. Mark move constructors and destructors noexcept so the STL\n"
-              << "   can use move semantics during reallocation.\n";
-    std::cout << "5. RAII guarantees cleanup because destructors always run\n"
-              << "   during stack unwinding, even on exceptions.\n";
+    std::cout << "4. Mark move constructors noexcept so the STL can use move\n"
+              << "   semantics during reallocation (destructors are already\n"
+              << "   implicitly noexcept).\n";
+    std::cout << "5. RAII guarantees cleanup because destructors run during stack\n"
+              << "   unwinding when an exception is caught.  (If it is never\n"
+              << "   caught, whether unwinding happens is implementation-defined.)\n";
 
     return 0;
 }

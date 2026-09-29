@@ -6,6 +6,9 @@
 //
 // Build: g++ -Wall -Wextra -Wpedantic -std=c++20 -g -pthread semaphores.cpp -o semaphores
 // Falls back to POSIX sem_t when std::counting_semaphore is unavailable.
+// Platform: Linux (glibc).  macOS does not provide sem_timedwait() and does
+// not implement unnamed semaphores (sem_init() is deprecated and fails with
+// ENOSYS), so this exercise does not build/run there as written.
 // =============================================================================
 
 #ifndef _GNU_SOURCE
@@ -19,6 +22,7 @@
 #include <thread>
 #include <vector>
 #include <chrono>
+#include <mutex>            // std::mutex, std::lock_guard (used in both branches)
 
 #include <semaphore.h>      // POSIX sem_t
 #include <fcntl.h>          // O_CREAT, O_EXCL for named semaphores
@@ -27,8 +31,16 @@
 #include <unistd.h>
 #include <sys/wait.h>       // waitpid
 
-// C++20 std::counting_semaphore / std::binary_semaphore
-#if __cpp_lib_semaphore >= 201907L
+// C++20 std::counting_semaphore / std::binary_semaphore.
+// Library feature-test macros are only guaranteed to be defined after
+// including <version> (C++20) or the corresponding header, so include
+// <version> first when it exists.
+#if defined(__has_include)
+#  if __has_include(<version>)
+#    include <version>
+#  endif
+#endif
+#if defined(__cpp_lib_semaphore) && __cpp_lib_semaphore >= 201907L
 #  include <semaphore>
 #  define HAVE_CPP_SEMAPHORE 1
 #else
@@ -44,12 +56,15 @@
 //   post (V, up, release):   increment; wake one blocked waiter if any.
 //
 // POSIX provides:
-//   Unnamed: sem_init / sem_wait / sem_post / sem_destroy  (within a process)
+//   Unnamed: sem_init / sem_wait / sem_post / sem_destroy  (between threads,
+//            or between processes if pshared=1 and the sem_t lives in
+//            shared memory)
 //   Named:   sem_open / sem_wait / sem_post / sem_close / sem_unlink (cross-process)
 //
 // C++20 adds:
 //   std::binary_semaphore    — max count 1; equivalent to POSIX unnamed binary sem
-//   std::counting_semaphore<N> — max count N; equivalent to counting sem
+//   std::counting_semaphore<N> — N is the LEAST max count the implementation
+//            must support (max() may be larger); equivalent to counting sem
 
 static void section1_concepts() {
     std::cout << "\n=== Section 1: Semaphore concepts ===\n";
@@ -307,6 +322,9 @@ static void section6_named() {
     }
     std::cout << "  Created named semaphore: " << SEM_NAME << "\n";
 
+    // Flush BEFORE fork(): otherwise text still in std::cout's buffer is
+    // copied into the child and printed twice when output is redirected.
+    std::cout.flush();
     pid_t pid = ::fork();
     if (pid == 0) {
         // CHILD: open by name, post, close

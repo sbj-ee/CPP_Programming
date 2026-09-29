@@ -40,12 +40,13 @@ std::exception          (.what() returns const char*)
 ├── std::runtime_error  (external errors — can happen)
 │   ├── std::range_error
 │   ├── std::overflow_error
-│   └── std::underflow_error
+│   ├── std::underflow_error
+│   └── std::system_error   (C++11; carries a std::error_code)
+│       └── std::ios_base::failure   (I/O error; derives from system_error since C++11)
 ├── std::bad_alloc      (new failed)
 ├── std::bad_cast       (dynamic_cast to ref failed)
 ├── std::bad_typeid     (typeid on null pointer)
-├── std::bad_function_call
-└── std::ios::failure   (I/O error)
+└── std::bad_function_call
 ```
 
 ---
@@ -296,16 +297,18 @@ catch (const std::exception& e) {
 // 3. Swallowing exceptions — silent failure
 try { f(); } catch (...) { }   // hides all errors; at least log!
 
-// 4. Throwing in destructor — causes std::terminate during stack unwinding
+// 4. Throwing in destructor — std::terminate
 ~MyClass() {
-    cleanup();   // if cleanup() throws while another exception is active → terminate
+    cleanup();   // destructors are implicitly noexcept (C++11), so if cleanup()
+                 // throws, std::terminate is called — during unwinding or not
 }
-// Fix: destructor must be noexcept; wrap throwing code in try/catch
+// Fix: catch inside the destructor (try { cleanup(); } catch (...) { log; })
 
-// 5. Exception from noexcept function — std::terminate (no unwinding)
+// 5. Exception from noexcept function — std::terminate
 void f() noexcept {
-    throw std::runtime_error("oops");  // std::terminate called immediately
-}
+    throw std::runtime_error("oops");  // std::terminate is called; whether the
+}                                      // stack is unwound first is
+                                       // implementation-defined
 
 // 6. std::optional — accessing empty optional
 std::optional<int> o;

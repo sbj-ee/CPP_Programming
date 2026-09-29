@@ -31,12 +31,16 @@ void print_vec(const std::vector<T>& v, const std::string& label = "") {
 // SECTION 1: std::sort and std::stable_sort
 // =============================================================================
 //
-// sort is O(n log n) introsort; it does NOT preserve relative order of equals.
+// sort is O(n log n) (guaranteed since C++11; libstdc++/libc++/MSVC use an
+// introsort, but the algorithm is an implementation detail); it does NOT
+// preserve relative order of equals.
 // stable_sort is O(n log n) with a guarantee that equal elements keep their
 // original relative order — at the cost of more memory or time.
 //
 // Both accept an optional comparator: any callable (lambda, functor, function)
-// that satisfies strict weak ordering (irreflexive, asymmetric, transitive).
+// that satisfies strict weak ordering: irreflexive, transitive, and
+// "incomparability" (neither a<b nor b<a) is also transitive.  Violating it
+// (e.g. using <= as the comparator) is undefined behaviour.
 
 struct Student {
     std::string name;
@@ -265,12 +269,18 @@ void demo_binary_search() {
 // SECTION 8: unique+erase, reverse, rotate, shuffle
 // =============================================================================
 //
-// unique: moves duplicate consecutive elements to the end and returns an
-// iterator to the new logical end.  The range must be SORTED first.
-// Pair with erase to physically remove the duplicates.
+// unique: removes CONSECUTIVE duplicates by shifting the kept elements
+// forward, and returns an iterator to the new logical end.  Elements in
+// [new_end, end) are valid but unspecified (they are NOT "the duplicates").
+// Sorting first is only needed if you want ALL duplicates removed, since
+// unique only compares adjacent elements.
+// Pair with erase to physically shrink the container.
 //
 // rotate: rotates elements so that a given element becomes the new front.
-// shuffle: randomly permutes using a Mersenne Twister.
+// shuffle: randomly permutes using a caller-supplied random engine (here a
+// std::mt19937 Mersenne Twister with a fixed seed).  mt19937's output
+// sequence is fully specified, but the way std::shuffle consumes it is not,
+// so the "shuffled" line can differ between libstdc++, libc++ and MSVC.
 
 void demo_reorder() {
     std::cout << "\n--- Section 8: unique+erase, reverse, rotate, shuffle ---\n";
@@ -307,7 +317,7 @@ void demo_reorder() {
 //
 // STL algorithms express their requirements in terms of iterator categories:
 //
-//  InputIterator        — single-pass read (istream_iterator, forward_list)
+//  InputIterator        — single-pass read (istream_iterator)
 //  OutputIterator       — single-pass write (ostream_iterator, back_inserter)
 //  ForwardIterator      — multi-pass read/write (singly-linked forward_list)
 //  BidirectionalIterator— + decrement (list, set, map)
