@@ -14,8 +14,10 @@ BINS := $(SRCS:.cpp=)
 
 .PHONY: all clean valgrind
 
+# "|| exit 1" makes a failure in ANY directory fail the whole make (a plain
+# shell for-loop only returns the status of its last iteration).
 all: $(BINS)
-	@for d in $(_MANAGED); do $(MAKE) -C $$d all; done
+	@for d in $(_MANAGED); do $(MAKE) -C $$d all || exit 1; done
 
 # Pattern rule: compile any standalone .cpp to a binary alongside it
 %: %.cpp
@@ -24,10 +26,10 @@ all: $(BINS)
 valgrind: all
 	@for bin in $(BINS); do \
 		echo "--- $$bin ---"; \
-		$(VALGRIND) $$bin 2>&1 | grep -E "ERROR SUMMARY|no leaks"; \
+		$(VALGRIND) $$bin || exit 1; \
 	done
-	@for d in $(_MANAGED); do $(MAKE) -C $$d valgrind; done
+	@for d in $(_MANAGED); do $(MAKE) -C $$d valgrind || exit 1; done
 
 clean:
 	@find exercises topics -type f ! -name '*.cpp' ! -name '*.hpp' ! -name '*.h' ! -name '*.md' ! -name 'Makefile' -delete
-	@for d in $(_MANAGED); do $(MAKE) -C $$d clean; done
+	@for d in $(_MANAGED); do $(MAKE) -C $$d clean || exit 1; done
