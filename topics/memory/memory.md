@@ -34,8 +34,8 @@ void g() {
 ```cpp
 // Single object
 int* p = new int;          // default-initialised (indeterminate value)
-int* q = new int(99);      // value-initialised to 99
-int* r = new int{};        // zero-initialised
+int* q = new int(99);      // direct-initialised to 99
+int* r = new int{};        // value-initialised → zero for int
 
 // Array
 int* arr = new int[10];         // 10 ints, indeterminate
@@ -65,7 +65,9 @@ public:
         : f_(std::fopen(path, "r")) {
         if (!f_) throw std::runtime_error("cannot open file");
     }
-    ~FileHandle() { std::fclose(f_); }   // always runs, even on exception
+    // Runs during unwinding too.  Guard: a moved-from object has f_ == nullptr,
+    // and std::fclose(nullptr) is undefined behaviour (glibc segfaults).
+    ~FileHandle() { if (f_) std::fclose(f_); }
 
     // Delete copy (resource is unique)
     FileHandle(const FileHandle&) = delete;
@@ -140,9 +142,10 @@ int* raw = new int(5);
 std::shared_ptr<int> sp(raw);   // OK, but prefer make_shared
 // NEVER: shared_ptr<int> bad1(raw); shared_ptr<int> bad2(raw); // two control blocks!
 
-// Custom deleter
+// Custom deleter.  Unlike unique_ptr, shared_ptr calls its deleter even when
+// the stored pointer is null — so guard it (fopen may fail):
 auto sp_c = std::shared_ptr<FILE>(std::fopen("x","r"),
-                                  [](FILE* f){ std::fclose(f); });
+                                  [](FILE* f){ if (f) std::fclose(f); });
 
 // enable_shared_from_this — get shared_ptr to this inside member
 struct Node : std::enable_shared_from_this<Node> {
@@ -205,16 +208,19 @@ public:
 
     // Copy constructor
     Buffer(const Buffer& o) : data_(new char[o.size_]), size_(o.size_) {
-        std::memcpy(data_, o.data_, size_);
+        if (size_) std::memcpy(data_, o.data_, size_);  // o.data_ may be null
     }
 
-    // Copy assignment
+    // Copy assignment — allocate BEFORE deleting, so that if `new` throws,
+    // *this is unchanged (deleting first would leave data_ dangling and the
+    // destructor would delete[] it twice).
     Buffer& operator=(const Buffer& o) {
         if (this != &o) {
+            char* fresh = new char[o.size_];
+            if (o.size_) std::memcpy(fresh, o.data_, o.size_);
             delete[] data_;
-            data_ = new char[o.size_];
+            data_ = fresh;
             size_ = o.size_;
-            std::memcpy(data_, o.data_, size_);
         }
         return *this;
     }
@@ -246,9 +252,11 @@ Prefer composition with RAII types so you need none of the five:
 
 ```cpp
 class Good {
-    std::unique_ptr<char[]> data_;  // handles all five automatically
-    size_t size_;
-};
+    std::unique_ptr<char[]> data_;  // no user-declared special members needed:
+    size_t size_;                   // destruction and moves are correct, and
+};                                  // copying is disabled (unique_ptr is
+                                    // move-only). For a copyable class, use
+                                    // std::vector<char> (or write the copy ops).
 ```
 
 ---
@@ -292,6 +300,7 @@ auto up2 = std::move(up);
 *up;   // UB: up is nullptr
 
 // 5. shared_ptr cycle — memory leak
+struct B;                            // forward declaration
 struct A { std::shared_ptr<B> b; };
 struct B { std::shared_ptr<A> a; };  // cycle: neither A nor B freed
 // Fix: one side uses weak_ptr

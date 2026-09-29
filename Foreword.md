@@ -14,7 +14,9 @@ smart compiler, should cost nothing at runtime. This principle — zero-overhead
 — has guided C++ ever since.
 
 Stroustrup's own copy of *The C Programming Language* sat on his shelf while he designed
-C++. He wanted C++ to remain a superset of C: any valid C program should compile as C++.
+C++. He wanted C++ to stay "as close as possible to C, but no closer": compatible enough
+that most C code compiles as C++, but never a strict superset (for example, C++ does not
+allow C's implicit conversion from `void*` to other pointer types).
 That constraint shaped the language deeply, and it explains both C++'s power and some of
 its peculiarities. The two languages have diverged since, but the genetic link remains
 visible everywhere.

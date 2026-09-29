@@ -314,9 +314,12 @@ SomeStruct s;
 std::memcpy(&s, ptr + offset, sizeof(s));   // safe
 // auto* p = reinterpret_cast<SomeStruct*>(ptr + offset);  // UB if misaligned
 
-// 6. mmap on macOS vs Linux: MAP_ANONYMOUS not available on macOS by name
-// Use MAP_ANON (BSD alias) or check with #ifdef
-#ifdef __APPLE__
+// 6. MAP_ANONYMOUS portability: current macOS SDKs define both MAP_ANON and
+// MAP_ANONYMOUS, but hide them when _POSIX_C_SOURCE is defined without
+// _DARWIN_C_SOURCE (MAP_ANONYMOUS only became POSIX in POSIX.1-2024).
+// If you define _POSIX_C_SOURCE, also define _DARWIN_C_SOURCE on macOS.
+// Very old BSD-derived systems only have the MAP_ANON spelling:
+#if !defined(MAP_ANONYMOUS) && defined(MAP_ANON)
     #define MAP_ANONYMOUS MAP_ANON
 #endif
 

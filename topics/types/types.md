@@ -180,8 +180,9 @@ const int ci = 5;
 int* pi = const_cast<int*>(&ci);  // UB (Undefined Behaviour) if you write through pi!
 
 // reinterpret_cast — raw bit reinterpretation; almost always unsafe
-uint64_t bits = reinterpret_cast<uint64_t>(ptr);
-// use memcpy for type-punning instead!
+std::uintptr_t bits = reinterpret_cast<std::uintptr_t>(ptr);  // pointer → integer:
+// use (u)intptr_t, the (optional) type guaranteed wide enough to round-trip a pointer
+// use memcpy (or C++20 std::bit_cast) for type-punning object bytes instead!
 ```
 
 | Cast | Use | Safety |
@@ -250,7 +251,9 @@ int x{3.14};    // ERROR: narrowing
 int y = 3.14;   // OK (but lossy, warns with -Wconversion)
 
 // 3. char signedness
-char c = 200;   // UB if char is signed (overflow); use unsigned char
+char c = 200;   // if char is signed (8-bit): NOT UB, but the result was
+                // implementation-defined before C++20 (-56 in practice) and is
+                // defined as modulo 2^8 (-56) since C++20; use unsigned char
 
 // 4. decltype((x)) is a reference — accidentally returning dangling ref
 decltype(auto) bad() { int x = 0; return (x); }  // returns int& to local!

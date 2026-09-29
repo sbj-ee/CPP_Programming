@@ -23,17 +23,18 @@ class Widget {
 public:
     // Default constructor — pick ONE of these alternatives:
     Widget() : x_(0), y_(0) {}       // user-defined
-    // Widget() = default;            // compiler-generated (if no other ctor defined)
+    // Widget() = default;            // explicitly defaulted (still available when
+    //                                // other ctors exist; the IMPLICIT default ctor
+    //                                // is only generated if no ctor is declared)
 
     // Parameterised constructor
     Widget(int x, int y) : x_(x), y_(y) {}
 
-    // Delegating constructor (C++11)
-    Widget(int n) : Widget(n, n) {}   // delegates to Widget(int,int)
-
-    // Converting constructor — single arg, implicit conversion
-    // Pick ONE of these alternatives:
-    Widget(int x) : x_(x), y_(0) {}  // allows implicit int→Widget conversion
+    // Single-int constructor — pick ONE of these alternatives (they all have
+    // the same signature, so only one may be declared):
+    Widget(int n) : Widget(n, n) {}   // delegating constructor (C++11); also an
+                                      // implicit converting ctor (int→Widget)
+    // Widget(int x) : x_(x), y_(0) {}           // plain converting constructor
     // explicit Widget(int x) : x_(x), y_(0) {}  // prevents implicit conversion
 
     // Copy constructor — pick ONE of these alternatives:
@@ -58,14 +59,16 @@ class Foo {
     int& ref_;         // reference — MUST use init list
 public:
     Foo(int id, std::string name, int& r)
-        : id_(id)         // order must match declaration order!
+        : id_(id)         // written in declaration order (see below)
         , name_(std::move(name))
         , ref_(r)
     {}
 };
 ```
 
-Init list order follows **declaration order**, not the order in the list.
+Members are initialised in **declaration order**, not the order written in the
+list.  Writing the list in a different order is legal but misleading; GCC and
+Clang warn with `-Wreorder` (enabled by `-Wall`).
 
 ---
 
@@ -89,13 +92,16 @@ private:
 ```cpp
 class Buffer {
 public:
-    // Copy assignment
+    // Copy assignment — allocate the new buffer BEFORE releasing the old one.
+    // (If you delete[] first and `new` then throws std::bad_alloc, data_ is
+    // left dangling and the destructor deletes it a second time.)
     Buffer& operator=(const Buffer& o) {
         if (this != &o) {       // self-assignment check
+            char* fresh = new char[o.size_];   // may throw: *this unchanged
+            if (o.size_) std::memcpy(fresh, o.data_, o.size_);
             delete[] data_;
-            data_ = new char[o.size_];
+            data_ = fresh;
             size_ = o.size_;
-            std::memcpy(data_, o.data_, size_);
         }
         return *this;           // return *this for chaining
     }
@@ -169,7 +175,10 @@ int Singleton::count_ = 0;      // definition (in .cpp)
 
 // constexpr static — define inline
 class Config {
-    static constexpr int MAX = 100;  // no out-of-class definition needed
+    static constexpr int MAX = 100;  // C++17: implicitly inline, so no
+                                     // out-of-class definition is needed.
+    // (C++11/14: needs `constexpr int Config::MAX;` in one .cpp if MAX is
+    //  ODR-used, e.g. bound to a const int& or its address taken.)
 };
 ```
 
@@ -273,8 +282,11 @@ Shape* s = new Circle(5.0);
 s->area();           // calls Circle::area() — runtime dispatch via vtable
 delete s;            // calls ~Circle() then ~Shape() IF ~Shape() is virtual
 
-// Non-virtual call (bypass vtable):
-s->Shape::describe();   // explicitly calls Shape::describe()
+// Qualified call suppresses virtual dispatch (Animal/Dog from above):
+Animal* a = new Dog("Rex");
+a->speak();             // virtual: Dog::speak()  -> "Woof!"
+a->Animal::speak();     // qualified: Animal::speak() -> "..."
+delete a;
 ```
 
 ---
@@ -332,7 +344,8 @@ void f(Animal& a) { a.speak(); }  // OK, virtual dispatch works
 class Base { };             // no virtual ~Base
 class Derived : public Base { int* p_; Derived() {p_=new int;} ~Derived() {delete p_;} };
 Base* b = new Derived();
-delete b;   // UB (Undefined Behaviour): ~Derived() not called, memory leak
+delete b;   // UB (Undefined Behaviour).  Typically ~Derived() is skipped and
+            // p_ leaks, but the standard guarantees nothing at all.
 // Fix: virtual ~Base() {}
 
 // 3. Calling virtual function in constructor/destructor

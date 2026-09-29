@@ -19,7 +19,7 @@ int* a2, *b2; // both int*
 | | Type | C++11+ |
 |-|------|--------|
 | `nullptr` | `std::nullptr_t` | preferred |
-| `NULL` | macro, usually `0` or `(void*)0` | C legacy |
+| `NULL` | macro: an integer null pointer constant such as `0`, `0L`, or GCC/Clang's `__null` (never `(void*)0` in C++) | C legacy |
 | `0` | `int` | avoid as pointer |
 
 ```cpp
@@ -29,7 +29,8 @@ if (!p) { }             // also idiomatic
 
 void f(int);
 void f(int*);
-f(NULL);     // calls f(int) — SURPRISE! NULL is 0
+f(NULL);     // SURPRISE: calls f(int) if NULL is 0, and is AMBIGUOUS (compile
+             // error) with GCC/Clang, whose NULL is __null — never f(int*)
 f(nullptr);  // calls f(int*) — correct
 ```
 
@@ -231,7 +232,8 @@ int* worse() {
 
 // 3. Null dereference
 int* p = nullptr;
-*p = 5;   // crash (SIGSEGV (Segmentation Fault signal))
+*p = 5;   // UB — typically crashes with SIGSEGV (Segmentation Fault signal),
+          // but the optimiser may also assume it cannot happen
 // Always check before deref or guarantee non-null
 
 // 4. Object slicing (pointer/reference avoids it)

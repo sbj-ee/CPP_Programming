@@ -36,10 +36,11 @@ sem_getvalue(&sem, &val); // read current value
 ```cpp
 #include <semaphore>
 
-// counting_semaphore<MaxVal> — template arg is compile-time max
-std::counting_semaphore<10> pool_sem{10};   // 10 slots; LeastMaxValue is required
-// std::counting_semaphore<> csem{5};       // invalid: no default for LeastMaxValue
-std::counting_semaphore<std::numeric_limits<std::ptrdiff_t>::max()> csem{5};  // use max
+// counting_semaphore<LeastMaxValue> — template arg is the minimum max count the
+// implementation must support (it has a default)
+std::counting_semaphore<10> pool_sem{10};   // 10 slots
+std::counting_semaphore<> csem{5};          // OK: LeastMaxValue defaults to an
+                                            // implementation-defined large value
 
 // binary_semaphore = counting_semaphore<1>
 std::binary_semaphore bsem{0};   // initial value 0 (locked)
@@ -66,7 +67,8 @@ sem.try_acquire_until(time_point); // timed; returns bool
 | Compiler-agnostic | Yes (POSIX) | C++20 compilers |
 | Header | `<semaphore.h>` | `<semaphore>` |
 | Compile-time max | No | Yes (`LeastMaxValue`) |
-| Check max | `sem_getvalue` | (no equivalent) |
+| Query max | `SEM_VALUE_MAX` | `counting_semaphore::max()` |
+| Read current value | `sem_getvalue` | (no equivalent) |
 
 ---
 
@@ -202,7 +204,8 @@ if (!ok) { /* timed out */ }
 
 bool ok2 = sem.try_acquire_until(std::chrono::steady_clock::now() + std::chrono::seconds(2));
 
-// POSIX — absolute time (monotonic or realtime)
+// POSIX — absolute time, measured against CLOCK_REALTIME (glibc's
+// sem_clockwait() is a non-standard extension that accepts CLOCK_MONOTONIC)
 struct timespec ts;
 clock_gettime(CLOCK_REALTIME, &ts);
 ts.tv_sec += 2;   // 2 seconds from now
@@ -232,7 +235,9 @@ clock_gettime(CLOCK_REALTIME, &ts); ts.tv_sec += 2;  // CORRECT
 // 3. Counting_semaphore max value is NOT the current value
 // The template parameter LeastMaxValue is just the maximum the impl must support
 std::counting_semaphore<10> s{0};
-s.release(15);  // UB if 15 > LeastMaxValue (implementation may allow or may not)
+s.release(15);  // UB if the counter would exceed s.max() (precondition:
+                // update <= max() - counter).  max() is >= LeastMaxValue (10)
+                // and may well be larger, so this may or may not be UB — don't rely on it
 
 // 4. Binary semaphore is NOT a mutex
 std::binary_semaphore bsem{1};

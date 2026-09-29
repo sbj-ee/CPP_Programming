@@ -230,7 +230,9 @@ public:
     void add(int fd, uint32_t events, void* data = nullptr) {
         epoll_event ev{};
         ev.events = events;
-        ev.data.ptr = data ? data : reinterpret_cast<void*>(static_cast<intptr_t>(fd));
+        // epoll_data is a union: store EITHER ptr OR fd, and read back the same
+        // member (reading data.fd after writing data.ptr is not valid C++)
+        if (data) ev.data.ptr = data; else ev.data.fd = fd;
         if (epoll_ctl(epfd_, EPOLL_CTL_ADD, fd, &ev) == -1)
             throw std::runtime_error(std::string("epoll_ctl ADD: ") + strerror(errno));
     }
@@ -239,7 +241,8 @@ public:
         epoll_ctl(epfd_, EPOLL_CTL_ADD, fd, &ev);
     }
     void mod(int fd, uint32_t events, void* data = nullptr) {
-        epoll_event ev{}; ev.events = events; ev.data.ptr = data;
+        epoll_event ev{}; ev.events = events;
+        if (data) ev.data.ptr = data; else ev.data.fd = fd;  // MOD replaces data too
         epoll_ctl(epfd_, EPOLL_CTL_MOD, fd, &ev);
     }
     void del(int fd) { epoll_ctl(epfd_, EPOLL_CTL_DEL, fd, nullptr); }
@@ -357,6 +360,7 @@ if (ev & EPOLLRDHUP) { /* peer done sending; may still send to them */ }
 // 7. Spurious EPOLLOUT — adding EPOLLOUT when already writable fires immediately
 // Only register EPOLLOUT when you have data to write; remove when write buffer empty
 
-// 8. poll/select timeout struct is modified on Linux (shows remaining time)
-// Reconstruct timeval/timespec before each call for reliable timeout
+// 8. select() timeout struct is modified on Linux (shows remaining time)
+// Reconstruct the timeval before each select() call for a reliable timeout.
+// (poll() takes its timeout as an int in milliseconds, so nothing is modified.)
 ```

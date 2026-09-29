@@ -135,8 +135,10 @@ e.symlink_status() // status of the link itself (not target)
 ```cpp
 fs::path tmp = fs::temp_directory_path();   // /tmp on Linux
 
-// Create a unique temp file (C++17 has no std::tmpfile equivalent)
-// Common approach: generate a name with random suffix
+// Create a unique temp file.  std::filesystem has no "make unique temp file"
+// function.  Options: std::tmpfile() from <cstdio> (anonymous, auto-deleted
+// FILE*), POSIX mkstemp() (safe unique NAMED file), or — as below — a
+// generated name (simple, but predictable names are open to races/attacks)
 fs::path tmp_file = tmp / ("myapp_" + std::to_string(getpid()) + ".tmp");
 std::ofstream f(tmp_file);
 // ... use ...
@@ -197,7 +199,7 @@ if (ec) { /* handle */ }
 | Pitfall | Fix |
 |---------|-----|
 | `fs::canonical` on non-existent path | Use `fs::weakly_canonical` instead (doesn't require existence) |
-| `file_size` on directory | Returns 0 or implementation-defined; don't rely on it |
+| `file_size` on directory | An error: throws `filesystem_error` (the `error_code` overload sets `ec` and returns `uintmax_t(-1)`) — check `is_regular_file` first |
 | Symlink vs target confusion | `is_symlink` + `read_symlink`; `status` follows links, `symlink_status` doesn't |
 | TOCTOU (Time-Of-Check Time-Of-Use): check then act | Prefer error-code overloads and handle errors, not pre-checking |
 | `remove_all` on wrong path | Double-check `is_directory` and review path before calling |

@@ -109,7 +109,7 @@ std::regex  re(R"(\d+)");
 
 for (auto it = std::sregex_iterator(text.begin(), text.end(), re);
      it != std::sregex_iterator(); ++it) {
-    std::smatch& m = *it;
+    const std::smatch& m = *it;   // operator* returns a const reference
     std::cout << m[0].str() << '\n';   // "1", "22", "333"
 }
 
@@ -222,7 +222,7 @@ catch (const std::regex_error& e) {
 // error_badbrace, error_badrepeat, error_brace,
 // error_brack, error_collate, error_complexity,
 // error_ctype, error_escape, error_paren, error_range,
-// error_space, error_stack, error_back, error_badrepeat
+// error_space, error_stack, error_backref
 ```
 
 ---
@@ -268,6 +268,7 @@ m[0].str();   // UB: s destroyed; m references s's data
 // smatch objects must NOT be shared — one per thread
 
 // 8. std::regex performance
-// std::regex is notably slow in many implementations (especially libstdc++ prior to GCC 14)
+// std::regex is notably slow in the major implementations (libstdc++, libc++,
+// MSVC STL) and ABI constraints make that hard to fix
 // Alternatives: RE2, PCRE2, Hyperscan, or compile-time CTRE for production use
 ```
