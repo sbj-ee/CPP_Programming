@@ -13,6 +13,8 @@
 #include <vector>
 #include <utility>
 #include <algorithm>
+#include <cstddef>      // std::size_t
+#include <type_traits>  // std::is_lvalue_reference_v, std::is_nothrow_*
 
 // =============================================================================
 // SECTION 1: lvalue vs rvalue — Reference Categories
@@ -26,7 +28,9 @@
 //
 // lvalue reference (T&): binds to lvalues only.
 // rvalue reference (T&&): binds to rvalues only.
-// const lvalue reference (const T&): binds to BOTH — the original "universal" ref.
+// const lvalue reference (const T&): binds to BOTH lvalues and rvalues.
+// (Not to be confused with the "universal"/forwarding reference T&& in a
+//  deduced template context — see Section 5.)
 
 void takes_lvalue_ref(int& x)        { std::cout << "  lvalue ref: " << x << "\n"; }
 void takes_rvalue_ref(int&& x)       { std::cout << "  rvalue ref: " << x << "\n"; }
@@ -55,8 +59,10 @@ void demo_value_categories() {
 // It must leave the moved-from object in a VALID but UNSPECIFIED state
 // (typically null/empty so the destructor is safe).
 //
-// noexcept is crucial: std::vector::push_back uses move only if noexcept;
-// otherwise it falls back to copy (for exception safety).
+// noexcept is crucial: when std::vector REALLOCATES, it relocates the existing
+// elements with std::move_if_noexcept — it moves them only if the move
+// constructor is noexcept (or the type is not copyable at all); otherwise it
+// copies them, to keep push_back's strong exception guarantee.
 
 class Buffer {
 public:
@@ -84,14 +90,18 @@ public:
         other.size_ = 0;
     }
 
-    // Copy assignment
+    // Copy assignment — allocate and copy FIRST, then release the old buffer.
+    // (Deleting first is a classic bug: if `new` throws, data_ is left
+    //  dangling and the destructor would delete[] it a second time.)
+    // Copy-and-swap is the other common way to get this right.
     Buffer& operator=(const Buffer& other) {
         if (this == &other) return *this;
         std::cout << "  Buffer COPY assigned\n";
+        int* fresh = new int[other.size_];              // may throw: *this intact
+        std::copy(other.data_, other.data_ + other.size_, fresh);
         delete[] data_;
-        data_ = new int[other.size_];
+        data_ = fresh;
         size_ = other.size_;
-        std::copy(other.data_, other.data_ + size_, data_);
         return *this;
     }
 
@@ -188,15 +198,19 @@ void demo_std_move() {
     std::string s1 = "Hello, World!";
     std::cout << "  before move: s1='" << s1 << "'\n";
 
-    std::string s2 = std::move(s1);  // move ctor; s1 is now ""
+    std::string s2 = std::move(s1);  // move ctor; s1 is now valid but
+                                     // unspecified (empty in practice)
     std::cout << "  after move:  s1='" << s1 << "'  s2='" << s2 << "'\n";
 
-    // After std::move, s1 is still a valid (empty) string — can reassign
+    // After std::move, s1 is still a valid string in an unspecified state
+    // (all three major libraries leave it empty, but the standard does not
+    // promise that) — assigning a new value is always fine.
     s1 = "Reassigned";
     std::cout << "  after reassign: s1='" << s1 << "'\n";
 
-    // std::move on rvalue has no extra effect (already rvalue)
-    Buffer b = Buffer(3);       // temporary is already rvalue — no redundant move needed
+    // No std::move needed for a prvalue: since C++17 copy elision is
+    // GUARANTEED here, so Buffer(3) initialises b directly — no move ctor call.
+    Buffer b = Buffer(3);
     std::cout << "  Buffer created inline, size=" << b.size() << "\n";
 }
 
@@ -281,7 +295,8 @@ void demo_string_vector_move() {
     std::string big(10000, 'x');  // 10K chars
     std::string moved = std::move(big);   // O(1) pointer swap
     std::cout << "  moved string size=" << moved.size()
-              << " original size=" << big.size() << " (empty)\n";
+              << " original size=" << big.size()
+              << " (unspecified; empty in practice)\n";
 
     // vector::push_back benefits from move-enabled elements
     std::vector<Buffer> vec;
@@ -300,9 +315,10 @@ void demo_string_vector_move() {
 // =============================================================================
 //
 // std::vector resizes by allocating new storage and moving elements.
-// If the move constructor is NOT noexcept, vector falls back to COPY to
-// maintain the strong exception guarantee.  Marking move ops noexcept
-// therefore enables the fast path in vector reallocation.
+// If the move constructor is NOT noexcept and the type IS copyable, vector
+// falls back to COPY to maintain the strong exception guarantee (a move-only
+// type is still moved, and then the guarantee is weakened).  Marking move ops
+// noexcept therefore enables the fast path in vector reallocation.
 
 void demo_noexcept_move() {
     std::cout << "\n--- Section 8: noexcept on Move Operations ---\n";

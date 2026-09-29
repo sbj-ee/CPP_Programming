@@ -20,6 +20,8 @@
 #include <queue>
 #include <string>
 #include <algorithm>
+#include <functional>   // std::greater
+#include <iterator>     // std::advance
 
 // Helper: print any iterable with a label
 template <typename Container>
@@ -130,7 +132,8 @@ void demo_list() {
 // map is a balanced BST (typically red-black tree).  Keys are always sorted.
 // insert/find/erase are O(log n).
 // operator[] inserts a default-constructed value if the key is absent — which
-// can be surprising and is never const-correct; prefer 'find' for lookup.
+// can be surprising, and it has no const overload (it cannot be called on a
+// const map); prefer 'find' (or 'at', which throws) for lookup.
 
 void demo_map() {
     std::cout << "\n--- Section 4: std::map ---\n";

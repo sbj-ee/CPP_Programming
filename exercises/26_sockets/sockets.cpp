@@ -185,6 +185,9 @@ static void section2_tcp() {
     std::cout << "  Server bound to loopback port " << port << "\n";
 
     // Fork: child is client, parent is server
+    // Flush BEFORE fork(): otherwise text still in std::cout's buffer is
+    // copied into the child and printed twice when output is redirected.
+    std::cout.flush();
     pid_t pid = ::fork();
     if (pid == 0) {
         // CLIENT
@@ -242,6 +245,9 @@ static void section3_udp() {
     int port = ntohs(saddr.sin_port);
     std::cout << "  UDP server on port " << port << "\n";
 
+    // Flush BEFORE fork(): otherwise text still in std::cout's buffer is
+    // copied into the child and printed twice when output is redirected.
+    std::cout.flush();
     pid_t pid = ::fork();
     if (pid == 0) {
         // CLIENT
@@ -297,6 +303,9 @@ static void section4_unix() {
     listen(server.fd(), 4);
     std::cout << "  AF_UNIX server at " << UNIX_SOCK_PATH << "\n";
 
+    // Flush BEFORE fork(): otherwise text still in std::cout's buffer is
+    // copied into the child and printed twice when output is redirected.
+    std::cout.flush();
     pid_t pid = ::fork();
     if (pid == 0) {
         server.close();

@@ -14,6 +14,7 @@
 #include <stdexcept>
 #include <string>
 #include <array>
+#include <utility>   // std::move, std::pair
 
 // =============================================================================
 // SECTION 1: Function Templates
@@ -228,8 +229,11 @@ void demo_nontype_params() {
 template <class T>           // 'class' works exactly like 'typename' here
 T square(T v) { return v * v; }
 
-// Deduction guide (optional): lets the compiler deduce Stack<T> from push args.
-// For built-in templates like std::vector you get this automatically.
+// Deduction guides: when a constructor alone does not let the compiler deduce
+// the template arguments, a class template can provide a guide, e.g.
+//     template <class It> Stack(It, It) -> Stack<typename It::value_type>;
+// The standard library ships guides for many of its templates; std::array
+// and std::pair below are deduced via such library-provided guides.
 
 void demo_typename_ctad() {
     std::cout << "\n--- Section 5: typename vs class, CTAD ---\n";
@@ -263,7 +267,9 @@ void demo_typename_ctad() {
 
 template <typename... Args>
 void variadic_print(Args&&... args) {
-    // Fold expression: expands to (std::cout << arg0 << " " << arg1 << " " ...)
+    // Unary right fold over the COMMA operator: expands to
+    //   (std::cout << arg0 << " "), (std::cout << arg1 << " "), ...
+    // (the comma operator guarantees left-to-right evaluation)
     ((std::cout << args << " "), ...);
     std::cout << "\n";
 }
@@ -312,8 +318,11 @@ int main() {
     std::cout << "2. 'typename' and 'class' are identical in template param\n"
               << "   lists; but only 'typename' can appear in dependent-name\n"
               << "   disambiguation inside a template body.\n";
-    std::cout << "3. Full specialisations must appear after the primary template\n"
-              << "   and are often placed in .cpp files to avoid ODR violations.\n";
+    std::cout << "3. A specialisation must be declared after the primary template\n"
+              << "   and before the first use that would instantiate it.  A full\n"
+              << "   specialisation of a FUNCTION template is an ordinary function:\n"
+              << "   define it in one .cpp, or mark it 'inline' if it is in a header\n"
+              << "   (otherwise: multiple-definition link errors / ODR violation).\n";
     std::cout << "4. CTAD (C++17) requires either a matching constructor or an\n"
               << "   explicit deduction guide.\n";
     std::cout << "5. Fold expressions require C++17.  For older code, use\n"

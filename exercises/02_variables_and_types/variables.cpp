@@ -65,7 +65,8 @@ void section_const_constexpr()
 {
     std::cout << "\n=== Section 3: const and constexpr ===\n";
 
-    // const: value cannot change after initialization (enforced at runtime).
+    // const: value cannot change after initialization (enforced at compile
+    // time — assigning to it is a compile error, not a runtime check).
     const int max_users = 100;
     std::cout << "const int max_users = " << max_users << "\n";
     // max_users = 200;  // error: assignment of read-only variable
@@ -157,9 +158,14 @@ void section_casts()
     char   ch    = static_cast<char>(65);   // int -> char
     std::cout << "static_cast<char>(65) = '" << ch << "'\n";
 
-    unsigned int u  = 4294967295U;
-    int          si = static_cast<int>(u);  // wraps around
-    std::cout << "static_cast<int>(UINT_MAX) = " << si << " (wrap-around)\n";
+    // Converting an out-of-range value to a signed type was
+    // implementation-defined before C++20 (every mainstream compiler wraps
+    // modulo 2^N); since C++20 the result is defined to be the value modulo 2^N.
+    // (Contrast: signed arithmetic OVERFLOW, e.g. INT_MAX + 1, is still UB.)
+    unsigned int u  = std::numeric_limits<unsigned int>::max();
+    int          si = static_cast<int>(u);  // -1 on two's-complement targets
+    std::cout << "static_cast<int>(UINT_MAX) = " << si
+              << " (wrap-around: implementation-defined before C++20)\n";
 
     // Signed / unsigned mismatch pitfall
     int    neg    = -1;

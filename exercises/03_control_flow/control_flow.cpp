@@ -77,9 +77,12 @@ void section_switch()
     int code = 2;
     std::cout << "Switch fall-through demo (code=" << code << "):\n";
     switch (code) {
-        case 1:
+        case 1:                   // empty case labels stacked together never
+                                  // need [[fallthrough]]
         case 2:
-            [[fallthrough]];      // C++17 attribute: suppress compiler warning
+            std::cout << "  (case 2 does some work, then falls through)\n";
+            [[fallthrough]];      // C++17: documents intent and silences
+                                  // -Wimplicit-fallthrough (-Wextra on GCC)
         case 3:
             std::cout << "  code is 1, 2, or 3\n";
             break;

@@ -85,6 +85,12 @@ void section_read_text()
 }
 
 // ── Section 3: fstream (read + write, binary) ─────────────────────────────────
+//
+// Writing a struct's raw bytes is only portable between builds with the SAME
+// layout: size, alignment/padding (DataRecord has 4 padding bytes after `id`
+// on typical 64-bit ABIs — their values are unspecified), and endianness.
+// Files written this way are not a portable interchange format; real formats
+// serialise each field explicitly with a fixed byte order.
 
 struct RecordHeader {
     uint32_t magic;     // 0xDEADBEEF
@@ -134,13 +140,20 @@ void section_binary_io()
         }
 
         RecordHeader hdr{};
-        ifs.read(reinterpret_cast<char*>(&hdr), sizeof(hdr));
+        if (!ifs.read(reinterpret_cast<char*>(&hdr), sizeof(hdr))
+            || hdr.magic != 0xDEADBEEF) {
+            std::cerr << "Bad or truncated header\n";
+            return;
+        }
         std::cout << "  magic=0x" << std::hex << hdr.magic << std::dec
                   << "  count=" << hdr.count << "\n";
 
         for (uint32_t i = 0; i < hdr.count; ++i) {
             DataRecord rec{};
-            ifs.read(reinterpret_cast<char*>(&rec), sizeof(rec));
+            if (!ifs.read(reinterpret_cast<char*>(&rec), sizeof(rec))) {
+                std::cerr << "  truncated file at record " << i << "\n";
+                return;   // never trust a count read from a file
+            }
             // label may not be null-terminated if full 8 chars used
             char label[9] = {};
             std::memcpy(label, rec.label, 8);
@@ -154,7 +167,10 @@ void section_binary_io()
                                 + static_cast<std::streamoff>(sizeof(DataRecord));
         ifs.seekg(rec1_pos);
         DataRecord rec{};
-        ifs.read(reinterpret_cast<char*>(&rec), sizeof(rec));
+        if (!ifs.read(reinterpret_cast<char*>(&rec), sizeof(rec))) {
+            std::cerr << "  seek/read of record[1] failed\n";
+            return;
+        }
         char label[9] = {};
         std::memcpy(label, rec.label, 8);
         std::cout << "  seekg to record[1]: id=" << rec.id << " label=\"" << label << "\"\n";
@@ -207,7 +223,7 @@ void section_error_checking()
     // is_open()
     std::ifstream missing("/nonexistent/path/file.txt");
     std::cout << "is_open(\"/nonexistent\"): " << std::boolalpha << missing.is_open() << "\n";
-    if (!missing)   // operator bool checks failbit
+    if (!missing)   // operator bool returns !fail() (failbit or badbit set)
         std::cout << "Stream in error state (operator bool)\n";
 
     // fail(), eof(), bad()
@@ -253,8 +269,10 @@ void section_raii_and_fs()
     std::cout << "  - Streams close automatically when they go out of scope (RAII).\n";
     std::cout << "  - Always check is_open() or operator bool after opening.\n";
     std::cout << "  - Text mode: newline translation may occur on Windows.\n";
-    std::cout << "  - Binary mode (ios::binary): exact byte representation.\n";
-    std::cout << "  - seekg/seekp move read/write positions independently in fstream.\n";
+    std::cout << "  - Binary mode (ios::binary): no newline translation; bytes are\n"
+              << "    written as-is (raw structs still depend on padding/endianness).\n";
+    std::cout << "  - fstream (basic_filebuf) has ONE file position: seekg and seekp\n"
+              << "    move the same position (stringstream keeps two independent ones).\n";
     std::cout << "  - stringstream is useful for in-memory formatting and parsing.\n";
 }
 

@@ -6,6 +6,8 @@
 #include <string>
 #include <memory>     // unique_ptr, shared_ptr, weak_ptr, make_unique, make_shared
 #include <cstring>    // std::memcpy
+#include <stdexcept>  // std::out_of_range
+#include <utility>    // std::move
 
 // ── Section 1: new / delete and new[] / delete[] ──────────────────────────────
 
@@ -69,7 +71,9 @@ public:
     Buffer(const Buffer& other)
         : size_(other.size_), data_(new char[other.size_])
     {
-        std::memcpy(data_, other.data_, size_);
+        // Guard: a moved-from Buffer has data_ == nullptr, and passing a null
+        // pointer to memcpy is UB even when the size is 0.
+        if (size_) std::memcpy(data_, other.data_, size_);
         std::cout << "  [Buffer] copy ctor\n";
     }
 
@@ -90,7 +94,7 @@ public:
 
     void fill(int val)
     {
-        std::memset(data_, val, size_);
+        if (size_) std::memset(data_, val, size_);  // data_ may be null if moved-from
     }
 
     char at(std::size_t idx) const

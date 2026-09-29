@@ -16,6 +16,7 @@
 #include <cstring>      // strsignal
 #include <unistd.h>     // alarm(), write(), pause(), STDOUT_FILENO
 #include <sys/types.h>
+#include <cstddef>      // std::size_t
 
 // =============================================================================
 // SECTION 1: Signal Table
@@ -25,7 +26,9 @@
 // originate from the kernel (hardware faults), the terminal (Ctrl-C), another
 // process (kill()), or the process itself (raise()).
 //
-// The 13 POSIX-guaranteed signals every C++ programmer should know:
+// 13 common signals every C++ programmer should know (all defined by POSIX;
+// ISO C++ itself only guarantees SIGABRT, SIGFPE, SIGILL, SIGINT, SIGSEGV
+// and SIGTERM):
 
 struct SigEntry {
     int         number;
@@ -151,13 +154,38 @@ static void section3_sig_atomic() {
 //   SA_SIGINFO  — handler receives extra info via siginfo_t (sender PID, etc.)
 //   sigprocmask — block/unblock a set of signals (critical sections)
 
+// Async-signal-safe helpers: snprintf/printf are NOT on the POSIX list of
+// async-signal-safe functions, so the handler formats integers by hand and
+// emits the result with write(), which IS async-signal-safe.
+static std::size_t append_str(char* buf, std::size_t pos, std::size_t cap,
+                              const char* s) {
+    while (*s && pos + 1 < cap) buf[pos++] = *s++;
+    return pos;
+}
+
+static std::size_t append_int(char* buf, std::size_t pos, std::size_t cap,
+                              long v) {
+    char tmp[24];
+    std::size_t len = 0;
+    unsigned long u = (v < 0) ? 0UL - static_cast<unsigned long>(v)
+                              : static_cast<unsigned long>(v);
+    do { tmp[len++] = static_cast<char>('0' + u % 10); u /= 10; } while (u);
+    if (v < 0 && pos + 1 < cap) buf[pos++] = '-';
+    while (len && pos + 1 < cap) buf[pos++] = tmp[--len];
+    return pos;
+}
+
 static void siginfo_handler(int signum, siginfo_t* info, void* /*context*/) {
-    // Only async-signal-safe calls!
+    // Only async-signal-safe calls in here!
     char buf[128];
-    int  n = snprintf(buf, sizeof(buf),
-        "  [SA_SIGINFO handler] sig=%d from pid=%d\n",
-        signum, static_cast<int>(info->si_pid));
-    write(STDOUT_FILENO, buf, static_cast<size_t>(n));
+    std::size_t n = 0;
+    n = append_str(buf, n, sizeof(buf), "  [SA_SIGINFO handler] sig=");
+    n = append_int(buf, n, sizeof(buf), signum);
+    n = append_str(buf, n, sizeof(buf), " from pid=");
+    n = append_int(buf, n, sizeof(buf), static_cast<long>(info->si_pid));
+    n = append_str(buf, n, sizeof(buf), "\n");
+    ssize_t rc = write(STDOUT_FILENO, buf, n);
+    (void)rc;   // nothing useful (or safe) to do on failure inside a handler
 }
 
 static void section4_sigaction() {
@@ -228,7 +256,7 @@ static void section5_sigalrm() {
     // Busy work loop — runs until alarm fires
     volatile long counter = 0;
     while (!g_alarm_fired) {
-        ++counter;
+        counter = counter + 1;  // (++ on a volatile is deprecated in C++20)
     }
 
     std::cout << "  Busy loop counted to " << counter
@@ -266,15 +294,18 @@ static void section6_async_safety() {
     std::cout << "    sigprocmask()  — mask manipulation\n";
     std::cout << "    sem_post()     — POSIX semaphore post\n";
     std::cout << "    kill()         — send a signal\n";
-    std::cout << "    snprintf()     — safe IF no heap allocation path is taken\n";
-    std::cout << "      (use only with fixed buffers; do not use %s with %m)\n";
+    std::cout << "    (NOT snprintf/printf: they are not on the POSIX list, even\n"
+              << "     with a fixed buffer — format numbers by hand, as the\n"
+              << "     Section 4 handler does, then write())\n";
 
     std::cout << "\n  UNSAFE in a signal handler:\n";
     std::cout << "    std::cout / std::cerr / printf — use internal locks\n";
     std::cout << "    malloc / new / delete          — heap lock\n";
-    std::cout << "    exit() / std::exit()           — flushes atexit handlers\n";
+    std::cout << "    exit() / std::exit()           — runs atexit handlers and\n"
+              << "                                     flushes stdio buffers\n";
     std::cout << "    anything that holds a mutex    — deadlock risk\n";
-    std::cout << "    longjmp() into non-handler     — undefined on most platforms\n";
+    std::cout << "    longjmp() out of a handler     — only safe if the signal did not\n"
+              << "                                     interrupt an unsafe function\n";
 
     std::cout << "\n  Best practice:\n";
     std::cout << "    Handler: set volatile sig_atomic_t flag only.\n";

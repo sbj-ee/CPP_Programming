@@ -18,7 +18,7 @@
 #include <string>
 #include <chrono>
 #include <functional>
-#include <cassert>
+#include <memory>       // std::make_shared
 
 // =============================================================================
 // SECTION 1: std::thread basics — create, join, detach, lambda capture
@@ -63,8 +63,13 @@ static void section1_basics() {
     // We sleep briefly so the demo output appears before section 2.
     std::thread t4([]() {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        // NOTE: writing to cout from a detached thread can race with main.
-        // Acceptable here because we sleep enough; in production use a mutex.
+        // NOTE: concurrent use of std::cout from several threads is NOT a
+        // data race (the standard streams are synchronised while
+        // sync_with_stdio(true) is in effect), but output from different
+        // threads may interleave.  The sleeps below make ordering LIKELY,
+        // not guaranteed.  A detached thread must also finish before main()
+        // returns and static objects such as std::cout are destroyed — prefer
+        // join() (or std::jthread) in real code.
         std::cout << "  [thread 4] detached thread finishing\n";
     });
     t4.detach();
@@ -86,12 +91,16 @@ static void section1_basics() {
 //   store register → counter
 // This is a read-modify-write: not atomic.  When two threads interleave these
 // steps the result is a "lost update" — final count is less than expected.
+//
+// *** INTENTIONAL DATA RACE (undefined behaviour) — for demonstration only. ***
+// ThreadSanitizer (-fsanitize=thread) WILL report "data race" on
+// g_racy_counter here; that report is expected.  Sections 3+ show the fixes.
 
 static long g_racy_counter = 0;
 
 static void racy_increment(long n) {
     for (long i = 0; i < n; ++i)
-        ++g_racy_counter;   // data race — undefined behaviour
+        ++g_racy_counter;   // INTENTIONAL data race — undefined behaviour
 }
 
 static void section2_race_condition() {
@@ -154,8 +163,12 @@ static void section3_mutex() {
 
     std::cout << "  Expected: " << EXPECTED << "\n";
     std::cout << "  Got:      " << g_safe_counter << "\n";
-    assert(g_safe_counter == EXPECTED);
-    std::cout << "  Assertion passed — mutex guarantees correct count.\n";
+    // Checked explicitly rather than with assert(), which compiles to nothing
+    // under -DNDEBUG and would then print a success message unconditionally.
+    if (g_safe_counter == EXPECTED)
+        std::cout << "  Check passed — mutex guarantees correct count.\n";
+    else
+        std::cout << "  UNEXPECTED: count mismatch with mutex!\n";
 }
 
 // =============================================================================
@@ -308,7 +321,8 @@ static void section6_pitfalls() {
 
     std::cout << "\n  5. DATA RACE on non-atomic shared variable:\n";
     std::cout << "     Undefined behaviour — result may be wrong, vary per run,\n";
-    std::cout << "     or crash.  Use mutex, std::atomic<>, or std::jthread.\n";
+    std::cout << "     or crash.  Use a mutex or std::atomic<>.  (std::jthread\n"
+              << "     only fixes the forgot-to-join problem, not data races.)\n";
 }
 
 // =============================================================================

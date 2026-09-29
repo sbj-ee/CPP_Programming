@@ -8,6 +8,7 @@
 #include <vector>
 #include <array>
 #include <sstream>       // std::ostringstream (for conversion demo)
+#include <stdexcept>     // std::invalid_argument, std::out_of_range
 
 // ── Section 1: std::string ────────────────────────────────────────────────────
 
@@ -112,7 +113,7 @@ void section_vector()
     v.reserve(8);
     std::cout << "After reserve(8): size=" << v.size() << " capacity=" << v.capacity() << "\n";
 
-    // push_back: copy into vector
+    // push_back: copies an lvalue argument, moves an rvalue argument
     v.push_back(10);
     v.push_back(20);
     v.push_back(30);
@@ -167,7 +168,8 @@ void section_array()
 {
     std::cout << "\n=== Section 4: std::array<T,N> ===\n";
 
-    // Fixed-size, stack-allocated, bounds checking via at()
+    // Fixed-size, elements stored inline (no heap allocation — on the stack
+    // when the array is a local variable), bounds checking via at()
     std::array<int, 5> arr = {10, 20, 30, 40, 50};
 
     std::cout << "arr.size() = " << arr.size() << "\n";

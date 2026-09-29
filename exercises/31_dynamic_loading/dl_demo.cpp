@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <vector>
 #include <stdexcept>
+#include <utility>   // std::move
 
 #include <dlfcn.h>  // dlopen, dlsym, dlclose, dlerror
 
@@ -71,8 +72,14 @@ public:
         return s;
     }
 
-    // Type-safe symbol lookup — cast to function pointer type T*.
-    // Using memcpy to cast avoids strict-aliasing UB (ISO C++ requirement).
+    // Typed symbol lookup — convert the void* to function pointer type FuncPtr.
+    // In ISO C++ (since C++11) converting between object and function
+    // pointers with reinterpret_cast is "conditionally-supported" (i.e.
+    // implementation-defined), and POSIX requires it to work for dlsym().
+    // memcpy is a common idiom inherited from C / C++98 code (where
+    // -Wpedantic warns about the cast); in C++11+ GCC and Clang accept
+    // reinterpret_cast silently.  memcpy is NOT more conforming than
+    // reinterpret_cast and relies on the same POSIX guarantee.
     template<typename FuncPtr>
     FuncPtr sym_as(const char* name) const {
         void* raw = sym(name);
@@ -111,10 +118,12 @@ static void section1_concepts() {
     std::cout << "    RTLD_LAZY  — resolve symbols on first use (faster load).\n";
     std::cout << "    RTLD_NOW   — resolve all symbols at load time (fail early).\n";
     std::cout << "    RTLD_GLOBAL— symbols become available for subsequent dlopen.\n";
-    std::cout << "    RTLD_LOCAL — symbols are private to this handle (default).\n\n";
+    std::cout << "    RTLD_LOCAL — symbols are private to this handle (the default\n"
+              << "                 on Linux/glibc; macOS defaults to RTLD_GLOBAL).\n\n";
 
-    std::cout << "  RTLD_DEFAULT — special pseudo-handle; searches all globally\n";
-    std::cout << "    loaded symbols (main + RTLD_GLOBAL libs).\n";
+    std::cout << "  RTLD_DEFAULT — special pseudo-handle (GNU/BSD extension, not\n";
+    std::cout << "    POSIX); searches all globally loaded symbols (main + RTLD_GLOBAL\n";
+    std::cout << "    libs) in default search order.\n";
 }
 
 // =============================================================================
@@ -240,9 +249,12 @@ static void section4_flags() {
 // SECTION 5: RTLD_DEFAULT — find strlen in libc
 // =============================================================================
 //
-// Passing NULL (RTLD_DEFAULT) to dlsym() searches all symbols in the current
+// Passing RTLD_DEFAULT to dlsym() searches all global symbols in the current
 // process, including those from libc, libstdc++, and any RTLD_GLOBAL libs.
 // This is useful to locate well-known runtime symbols by name.
+// RTLD_DEFAULT is an extension (glibc: needs _GNU_SOURCE, and happens to be
+// ((void*)0); macOS defines it as ((void*)-2)) — always use the macro, never
+// a literal NULL.
 
 static void section5_rtld_default() {
     std::cout << "\n=== Section 5: RTLD_DEFAULT — find strlen from libc ===\n";
@@ -255,7 +267,8 @@ static void section5_rtld_default() {
         return;
     }
 
-    // Cast void* to function pointer via memcpy (avoids strict-aliasing UB)
+    // Convert void* to function pointer via memcpy (see DynLib::sym_as for why;
+    // relies on POSIX, same as reinterpret_cast would)
     using StrlenFn = size_t(*)(const char*);
     StrlenFn my_strlen;
     std::memcpy(&my_strlen, &raw, sizeof(my_strlen));
@@ -268,11 +281,16 @@ static void section5_rtld_default() {
     ::dlerror();
     void* missing = ::dlsym(RTLD_DEFAULT, "this_symbol_does_not_exist_xyz");
     const char* missing_err = ::dlerror();
-    if (missing == nullptr && !missing_err) {
-        // dlsym returns NULL with no error when symbol simply isn't found
-        std::cout << "  dlsym(RTLD_DEFAULT, <missing>): NULL (symbol not found)\n";
-    } else if (missing_err) {
-        std::cout << "  dlsym error: " << missing_err << "\n";
+    if (missing_err) {
+        // A symbol that is not found is reported by dlerror() (glibc:
+        // "...: undefined symbol: ...").
+        std::cout << "  dlsym(RTLD_DEFAULT, <missing>): NULL, dlerror() = "
+                  << missing_err << "\n";
+    } else if (missing == nullptr) {
+        // NULL with NO error means the symbol exists and its value is NULL
+        // (e.g. a weak undefined symbol) — which is why dlerror() is the
+        // authoritative check, not the return value.
+        std::cout << "  dlsym(RTLD_DEFAULT, <missing>): symbol found with value NULL\n";
     }
 }
 
@@ -283,14 +301,16 @@ static void section5_rtld_default() {
 static void section6_pitfalls() {
     std::cout << "\n=== Section 6: Pitfalls ===\n";
 
-    std::cout << "  1. VOID* CAST: dlsym returns void*, but converting directly to\n";
-    std::cout << "     a function pointer is undefined in C++ (but allowed in C99).\n";
-    std::cout << "     Fix: use memcpy(&fp, &raw, sizeof(fp)) — safe in C++.\n";
-    std::cout << "     Most compilers accept reinterpret_cast or C cast as an extension.\n\n";
+    std::cout << "  1. VOID* CAST: dlsym returns void*.  Converting an object pointer\n";
+    std::cout << "     to a function pointer is conditionally-supported in C++11 and\n";
+    std::cout << "     later (implementation-defined; ISO C does not define it at all).\n";
+    std::cout << "     POSIX requires it to work, so reinterpret_cast<Fn>(raw) is fine\n";
+    std::cout << "     on POSIX systems; memcpy(&fp, &raw, sizeof fp) is an equivalent\n";
+    std::cout << "     alternative, not a more portable one.\n\n";
 
-    std::cout << "  2. SYMBOL NOT FOUND: dlsym returns NULL with NO error if the symbol\n";
-    std::cout << "     does not exist (dlerror returns NULL too).  Check return value\n";
-    std::cout << "     separately from dlerror.\n\n";
+    std::cout << "  2. SYMBOL NOT FOUND: dlsym returns NULL AND dlerror() reports it.\n";
+    std::cout << "     But NULL can also be a symbol's legitimate value, so the robust\n";
+    std::cout << "     pattern is: dlerror() to clear, dlsym(), then check dlerror().\n\n";
 
     std::cout << "  3. NAME MANGLING: C++ functions have mangled names (e.g.,\n";
     std::cout << "     _Z14plugin_computed).  Use extern \"C\" in the plugin to export\n";

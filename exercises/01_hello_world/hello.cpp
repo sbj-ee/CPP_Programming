@@ -65,7 +65,8 @@ int main()
     // ── Section 5: Compile-time string concatenation ─────────────────────────
     std::cout << "\n=== Section 5: Compile-time string concatenation ===\n";
 
-    // Adjacent string literals are merged by the compiler (preprocessor stage).
+    // Adjacent string literals are merged by the compiler (translation phase 6,
+    // after preprocessing — the preprocessor itself does not join them).
     // This is useful for splitting long strings across lines for readability.
     const char* message = "This is a very long string that is split "
                           "across two source lines "

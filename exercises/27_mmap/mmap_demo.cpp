@@ -9,6 +9,13 @@
 // =============================================================================
 
 #define _POSIX_C_SOURCE 200809L
+// MAP_ANONYMOUS is not part of POSIX.1-2008 (it was only standardised in
+// POSIX.1-2024).  glibc still exposes it here because g++/clang++ define
+// _GNU_SOURCE for C++, but macOS hides MAP_ANON/MAP_ANONYMOUS whenever
+// _POSIX_C_SOURCE is defined unless _DARWIN_C_SOURCE is also defined.
+#if defined(__APPLE__)
+#define _DARWIN_C_SOURCE
+#endif
 
 #include <iostream>
 #include <string>
@@ -16,7 +23,7 @@
 #include <cerrno>
 #include <cstdint>
 
-#include <unistd.h>     // getpagesize, ftruncate, close, unlink, read
+#include <unistd.h>     // sysconf, ftruncate, close, unlink, read
 #include <sys/mman.h>   // mmap, munmap, msync, MAP_SHARED, MAP_PRIVATE, MAP_ANONYMOUS
 #include <sys/stat.h>   // fstat, struct stat
 #include <fcntl.h>      // open, O_RDONLY, O_RDWR, O_CREAT, O_TRUNC
@@ -199,6 +206,11 @@ static void section3_shared_write() {
     // Re-read the file to verify
     {
         int rfd = ::open(path, O_RDONLY);
+        if (rfd == -1) {
+            std::cerr << "open(verify): " << std::strerror(errno) << "\n";
+            ::unlink(path);
+            return;
+        }
         MmapRegion verify(sz, PROT_READ, MAP_PRIVATE, rfd, 0);
         ::close(rfd);
         if (verify.valid()) {
@@ -264,6 +276,9 @@ static void section5_shared_fork() {
     long* counter = region.as<long>();
     *counter = 0;
 
+    // Flush BEFORE fork(): otherwise text still in std::cout's buffer is
+    // copied into the child and printed twice when output is redirected.
+    std::cout.flush();
     pid_t pid = ::fork();
     if (pid == 0) {
         // Child: increment the shared counter
@@ -310,7 +325,9 @@ static void section6_alignment_pitfalls() {
     std::cout << "       crash-safety; munmap() itself does NOT guarantee a sync.\n";
     std::cout << "    5. Closing the fd after mmap() is fine — the mapping holds\n";
     std::cout << "       a reference to the underlying inode.\n";
-    std::cout << "    6. Writing beyond the file size via MAP_SHARED causes SIGBUS.\n";
+    std::cout << "    6. Touching a mapped page that lies entirely beyond the end of\n";
+    std::cout << "       the file raises SIGBUS (bytes past EOF within the last page\n";
+    std::cout << "       read as zero and are never written back).\n";
     std::cout << "       Use ftruncate() to extend the file first.\n";
 }
 

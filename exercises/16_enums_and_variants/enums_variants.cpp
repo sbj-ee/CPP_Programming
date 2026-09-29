@@ -246,7 +246,8 @@ template <typename... Fs>
 struct Overloaded : Fs... {
     using Fs::operator()...;
 };
-// Deduction guide (C++17: often needed)
+// Deduction guide: REQUIRED in C++17 for aggregate CTAD like this; C++20
+// deduces aggregates without it (P1816), so it is redundant there.
 template <typename... Fs>
 Overloaded(Fs...) -> Overloaded<Fs...>;
 
@@ -310,8 +311,12 @@ int main() {
               << "   safety and to avoid polluting the enclosing namespace.\n";
     std::cout << "2. std::optional avoids sentinel values and null pointers;\n"
               << "   use value_or() to provide a safe default.\n";
-    std::cout << "3. std::variant is never empty (unlike plain union) unless\n"
-              << "   std::monostate is listed as an alternative.\n";
+    std::cout << "3. std::variant always holds one of its alternatives (unlike a\n"
+              << "   plain union, it tracks which).  std::monostate is just an\n"
+              << "   ordinary alternative meaning \"no value\", and makes the variant\n"
+              << "   default-constructible.  The one exception: if an exception is\n"
+              << "   thrown while switching alternatives, the variant can become\n"
+              << "   valueless_by_exception().\n";
     std::cout << "4. Prefer std::get_if over std::get to avoid exceptions\n"
               << "   when the active type is uncertain.\n";
     std::cout << "5. std::visit requires the visitor to handle ALL alternatives;\n"

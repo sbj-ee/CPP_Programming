@@ -7,6 +7,8 @@
 #include <list>       // std::list from STL
 #include <string>
 #include <utility>    // std::move
+#include <stdexcept>  // std::runtime_error
+#include <cstddef>    // std::size_t
 
 // ── LinkedList<T> class template ─────────────────────────────────────────────
 
@@ -21,7 +23,8 @@ private:
         explicit Node(const T& v, Node* n = nullptr)
             : value(v), next(n) {}
 
-        // In-place construction for emplace-style operations
+        // Rvalue overload: moves the value into the node instead of copying
+        // (a true emplace would take constructor arguments and forward them)
         explicit Node(T&& v, Node* n = nullptr)
             : value(std::move(v)), next(n) {}
     };
@@ -45,13 +48,24 @@ public:
         std::cout << "  [LinkedList] dtor (all nodes freed)\n";
     }
 
-    // Copy constructor (deep copy)
+    // Copy constructor (deep copy), O(n), preserves order.
+    // Exception safety: if copying a T (or allocating a Node) throws part-way,
+    // the destructor will NOT run for this half-constructed object, so we must
+    // free the nodes already built ourselves before rethrowing.
     LinkedList(const LinkedList& other) : head_(nullptr), size_(0)
     {
         std::cout << "  [LinkedList] copy ctor\n";
-        // Walk the other list from back to front would reverse; instead rebuild:
-        // Collect values in order first
-        vector_workaround_copy(other);
+        Node** tail = &head_;               // where the next node gets linked
+        try {
+            for (Node* cur = other.head_; cur; cur = cur->next) {
+                *tail = new Node(cur->value);
+                tail  = &(*tail)->next;
+                ++size_;
+            }
+        } catch (...) {
+            clear();                        // no leak on failure
+            throw;
+        }
     }
 
     // Move constructor: steal the other list's head (O(1))
@@ -175,21 +189,6 @@ public:
             if (cur->next) std::cout << " -> ";
         }
         std::cout << "]  (size=" << size_ << ")\n";
-    }
-
-private:
-    // Helper for copy ctor: perform a two-pass copy to preserve order
-    void vector_workaround_copy(const LinkedList& other)
-    {
-        // Collect values into a temporary stack, then push_back
-        // (to avoid reversing the order)
-        if (!other.head_) return;
-
-        // Count elements and build in order using recursion-free approach:
-        // Walk source, temporarily store in a local array on stack via recursion
-        // would be complex for large lists; instead use push_back for simplicity.
-        for (Node* cur = other.head_; cur; cur = cur->next)
-            push_back(cur->value);
     }
 };
 

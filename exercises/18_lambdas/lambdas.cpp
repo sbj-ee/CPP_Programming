@@ -13,6 +13,7 @@
 #include <functional>
 #include <string>
 #include <numeric>
+#include <iterator>   // std::back_inserter
 
 // =============================================================================
 // SECTION 1: Lambda Syntax
@@ -84,7 +85,7 @@ void demo_captures() {
     auto specific = [base](int x) { return base * x; };
     std::cout << "  [base] specific(5) = " << specific(5) << "\n";
 
-    // [&x] — capture only 'base' by reference
+    // [&x] — capture only 'counter' by reference
     int counter = 0;
     auto increment = [&counter]{ ++counter; };
     increment(); increment(); increment();
@@ -164,9 +165,11 @@ void demo_generic_lambda() {
 //
 // std::function<R(Args...)> can hold ANY callable with matching signature:
 // lambdas, function pointers, functors, bind expressions.
-// It uses type erasure (heap allocation) so there is overhead compared to
-// a direct lambda stored in 'auto'.  Prefer 'auto' when the callable won't
-// be stored polymorphically.
+// It uses type erasure: calls go through an indirect (virtual-like) call, and
+// storing a large callable MAY heap-allocate (small callables usually fit in
+// an internal small-buffer and do not).  So there is overhead compared to a
+// lambda stored in 'auto'.  Prefer 'auto' when the callable won't be stored
+// polymorphically.
 
 int regular_function(int x) { return x * 2; }
 
@@ -330,10 +333,12 @@ int main() {
     std::cout << "\n--- Notes & Pitfalls ---\n";
     std::cout << "1. [&] is dangerous if the lambda outlives the enclosing\n"
               << "   scope (e.g., stored in a std::function returned from\n"
-              << "   a function) — prefer [=] or explicit [x] captures.\n";
+              << "   a function) — prefer explicit [x] captures (note that [=]\n"
+              << "   inside a member function still captures 'this' by pointer).\n";
     std::cout << "2. 'mutable' lets you modify a by-value captured copy but\n"
               << "   does NOT modify the original variable.\n";
-    std::cout << "3. std::function has overhead (heap alloc, virtual dispatch);\n"
+    std::cout << "3. std::function has overhead (indirect call; may heap-allocate\n"
+              << "   large callables);\n"
               << "   prefer 'auto' when the callable type is known statically.\n";
     std::cout << "4. Generic lambdas (auto params) generate template operator()\n"
               << "   — the compiler instantiates a separate version per type.\n";
